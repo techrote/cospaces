@@ -54,6 +54,19 @@ def test_github_auth_failure_is_distinct() -> None:
     assert listed.failure.code == "github_auth_unavailable"
 
 
+def test_explicit_missing_codespace_is_selection_failure() -> None:
+    service = WorkspaceService(
+        FakeGitHub([command_result("", returncode=1, stderr="codespace not found")])
+    )
+
+    described = service.describe("missing")
+
+    assert not described.ok
+    assert described.failure is not None
+    assert described.failure.code == "workspace_not_found"
+    assert int(described.failure.exit_status) == 4
+
+
 def test_malformed_workspace_item_is_rejected() -> None:
     service = WorkspaceService(FakeGitHub([command_result([{"state": "Available"}])]))
 
