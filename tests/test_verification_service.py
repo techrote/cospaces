@@ -102,3 +102,66 @@ required = true
         + "\n",
         encoding="utf-8",
     )
+
+
+def test_checks_run_sequentially_and_lock_first_workspace(tmp_path: Path) -> None:
+    write_plan(tmp_path)
+    runner = FakeRunService([outcome("run-1"), outcome("run-2")])
+    service = VerificationService(
+        tmp_path,
+        run_service=runner,  # type: ignore[arg-type]
+        probe=FakeProbe(),  # type: ignore[arg-type]
+    )
+
+    result = service.verify(
+        VerificationRequest(
+            repository="owner/repo",
+            ref="main",
+            task_id="issue-5",
+            correlation_id="chat-1",
+        )
+    )
+
+    assert result.ok
+    assert result.record is not None
+    assert result.record.complete is True
+    assert result.record.passed is True
+    assert [check.name for check in result.record.checks] == ["first", "second"]
+    assert [request.argv[-1] for request in runner.requests] == [
+        "first-command",
+        "second-command",
+    ]
+    assert runner.requests[0].codespace is None
+    assert runner.requests[1].codespace == "space-one"
+    assert all(request.correlation_id == result.record.verification_id for request in runner.requests)
+    assert UUID(result.record.verification_id)
+    assert result.record.repository == "owner/repo"
+    assert result.record.ref == "main"
+    assert result.record.head == "abc123"
+    assert result.record.workspace is not None
+    assert result.record.workspace["name"] == "space-one"
+
+
+def test_required_failure_sets_verification_exit_and_continues(tmp_path: Path) -> None:
+    write_plan(tmp_path)
+    failure = DomainFailure(
+        code="remote_task_failed",
+        kind=FailureKind.REMOTE,
+        message="remote failed",
+    )
+    runner = FakeRunService(
+        [outcome("run-1", exit_code=23, failure=failure), outcome("run-2")]
+    )
+    service = VerificationService(tmp_path, run_service=runner)  # type: ignore[arg-type]
+
+    result = service.verify(VerificationRequest(codespace="space-one"))
+
+    assert not result.ok
+    assert result.failure is not None
+    assert result.failure.code == "verification_failed"
+    assert int(result.failure.exit_status) == 7
+    assert result.record is not None
+    assert result.record.complete is True
+    assert result.record.passed is False
+    assert [check.passed for check in result.record.checks] == [False, True]
+    assert len(runner.requests) == 2
