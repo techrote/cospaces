@@ -10,6 +10,10 @@ The initial implementation uses GitHub CLI (`gh`) for Codespaces operations. Rel
 
 `gh codespace list --json` and `gh codespace view --json` expose machine-readable workspace data including `name`, `repository`, `gitStatus`, `state`, `displayName`, and `machineName`. T1 uses `gitStatus.ref` as the current ref when GitHub supplies it; missing values remain unknown rather than inferred.
 
+When a ref-constrained selection sees candidates whose refs are missing, T1 must fail closed if those unknown candidates prevent proving that exactly one candidate matches. A known matching candidate is not sufficient while another candidate could also match but has unknown metadata.
+
+Controller-side T1 control-plane calls are time-bounded. Expiry is reported as retryable infrastructure failure. That controller timeout is a local wait bound; it is not proof that GitHub cancelled any server-side operation.
+
 ## Non-interactive behaviour
 
 GitHub CLI documents `GH_PROMPT_DISABLED`: when set, interactive prompting is disabled. `cospaces` sets it for controller-side `gh` invocations so autonomous operations cannot fall through to interactive repository, machine, devcontainer, or Codespace selectors.
@@ -34,15 +38,19 @@ The captured stderr stream may contain both remote stderr and SSH/GitHub CLI tra
 
 A controller timeout terminates the local `gh codespace ssh` invocation, but that does not prove the remote process was terminated. Timed-out runs therefore report `remote_completion = "unknown"`.
 
+The current controller process adapter captures stdout/stderr in memory and does not yet impose an output-size bound. This is an implementation hardening limitation, not a Codespaces platform fact; callers should avoid intentionally unbounded-output commands until the adapter is hardened.
+
 GitHub published a Codespaces SSH/logs local command-execution vulnerability affecting GitHub CLI versions through 2.61.0, fixed in 2.62.0. T2 refuses live SSH execution when it can establish that `gh` is older than 2.62.0.
 
 ## T4 repository-relative verification facts
 
 GitHub Codespaces exposes `GITHUB_REPOSITORY` as a default environment variable in `owner/repository` form. GitHub's Codespaces/CLI documentation also uses `/workspaces/REPOSITORY-NAME` as the repository checkout path.
 
-T4 uses those documented conventions only to establish the checkout root for repository-relative verification working directories. It derives the repository-name component from `GITHUB_REPOSITORY`, requires `/workspaces/<repository-name>` to exist, then changes directory beneath that root before executing the configured argv.
+T4 uses those documented conventions only to establish the checkout root for repository-relative verification working directories. It derives the repository-name component from `GITHUB_REPOSITORY`, requires `/workspaces/<repository-name>` to exist, and resolves both that root and the requested working directory to physical paths before execution. The target physical path must equal the physical root or remain beneath it, so a repository symlink cannot escape the checkout.
 
-The wrapper text is fixed by `cospaces`. The configured relative directory, environment assignments, and command arguments are passed as positional argv data rather than interpolated into controller shell text. Configuration validation rejects absolute working directories, `..` path components, backslash separators, and NULs.
+The wrapper text is fixed by `cospaces`. The configured relative directory, environment assignments, and command arguments are passed as positional argv data rather than interpolated into controller shell text. Configuration validation rejects absolute working directories, `..` path components, backslash separators, NULs, and non-finite timeouts.
+
+T4 v1 does not currently observe the remote Git commit SHA. Workspace repository/ref data may be reported when GitHub establishes them, but the controller checkout HEAD is not a valid substitute for the remote Codespace HEAD and must not be copied into a verification record.
 
 This does not imply that arbitrary paths outside the repository checkout are valid verification working directories in v0.1.
 
