@@ -6,6 +6,8 @@ from collections.abc import Sequence
 from typing import cast
 
 from . import __version__
+from .checkpoint_cli import add_checkpoint_parser
+from .checkpoint_dispatch import run_checkpoint
 from .domain.contracts import DomainFailure, FailureKind
 from .domain.results import failure_result
 from .run_cli import add_run_parser
@@ -24,8 +26,9 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="tool", title="tools")
     add_workspace_parser(subparsers)
     add_run_parser(subparsers)
+    add_checkpoint_parser(subparsers)
     for tool in PLANNED_TOOLS:
-        if tool in {"workspace", "run"}:
+        if tool in {"workspace", "run", "checkpoint"}:
             continue
         child = subparsers.add_parser(tool, help=f"{tool} tool (planned)")
         child.add_argument("--json", action="store_true", dest="json_output")
@@ -56,6 +59,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_workspace(namespace)
     if tool == "run":
         return run_remote(namespace)
+    if tool == "checkpoint":
+        return run_checkpoint(namespace)
     return _planned_tool(tool, json_output=bool(namespace.json_output))
 
 
