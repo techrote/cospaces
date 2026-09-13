@@ -13,4 +13,17 @@ class CommandResult:
 
 
 class ProcessAdapter:
-    """Marker boundary for controller-side process adapters."""
+    def capture(self, argv: tuple[str, ...]) -> CommandResult:
+        completed = subprocess.run(
+            argv,
+            check=False,
+            capture_output=True,
+            text=True,
+            shell=False,
+        )
+        return CommandResult(
+            argv=argv,
+            returncode=completed.returncode,
+            stdout=completed.stdout,
+            stderr=completed.stderr,
+        )
