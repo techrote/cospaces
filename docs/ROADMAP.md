@@ -41,20 +41,24 @@ An agent can acquire a Codespace, run work, checkpoint state, and run authoritat
 
 ## Phase 1 hardening gate
 
-Issue #18 converts this gate into executable repository machinery.
+Issue #18 converted this gate into executable repository machinery. Issue #20/PR #21 then performed a repository-wide corrective audit of the implemented MVP and hardened target certainty, provenance truthfulness, physical verification containment, strict schema/config validation, controller wait bounds, and malformed-request preflight.
 
 Automated/network-free hardening is enforced in ordinary CI through `python tools/hardening_smoke.py --json` and covers:
 - JSON schema/version and exit-code contracts;
-- workspace ambiguity/failure paths;
-- run timeout/transport/remote-failure distinctions;
-- checkpoint corruption/history plus reconstructed-controller continuation;
+- workspace ambiguity, incomplete-ref metadata, and failure paths;
+- bounded T1 control-plane waits;
+- run malformed-input/timeout/transport/remote-failure distinctions;
+- checkpoint strict-schema/corruption/history plus reconstructed-controller continuation;
 - cross-tool workspace/run/verification references;
 - verify-pass and verify-fail composition through the real parser/config/service/output stack over fake T2;
+- physical verification working-directory containment and truthful remote provenance;
 - documentation reconciliation.
 
 The real disposable-Codespace smoke remains an explicit evidence sub-gate. It is **pending until deliberately executed** with `tools/live_codespace_smoke.py --codespace NAME`; ordinary CI must not create or run a billable Codespace. See `docs/HARDENING.md`.
 
-Phase 2 remains deferred while this live evidence is pending unless a later explicit decision supersedes the gate.
+Issue #22 separately tracks bounded/spooled T2 output and stronger local timeout/process-tree cleanup discovered by the audit. The current limitation is explicit and tested around truthful timeout semantics; it is not silently treated as solved.
+
+Phase 2 remains deferred while the live evidence is pending unless a later explicit decision supersedes the gate.
 
 ## Phase 2 — planned tools
 
