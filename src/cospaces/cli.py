@@ -13,6 +13,8 @@ from .domain.results import failure_result
 from .run_cli import add_run_parser
 from .run_dispatch import run_remote
 from .services.tool_registry import PLANNED_TOOLS
+from .verify_cli import add_verify_parser
+from .verify_dispatch import run_verify
 from .workspace_cli import add_workspace_parser
 from .workspace_dispatch import run_workspace
 
@@ -27,8 +29,9 @@ def build_parser() -> argparse.ArgumentParser:
     add_workspace_parser(subparsers)
     add_run_parser(subparsers)
     add_checkpoint_parser(subparsers)
+    add_verify_parser(subparsers)
     for tool in PLANNED_TOOLS:
-        if tool in {"workspace", "run", "checkpoint"}:
+        if tool in {"workspace", "run", "checkpoint", "verify"}:
             continue
         child = subparsers.add_parser(tool, help=f"{tool} tool (planned)")
         child.add_argument("--json", action="store_true", dest="json_output")
@@ -61,6 +64,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_remote(namespace)
     if tool == "checkpoint":
         return run_checkpoint(namespace)
+    if tool == "verify":
+        return run_verify(namespace)
     return _planned_tool(tool, json_output=bool(namespace.json_output))
 
 
