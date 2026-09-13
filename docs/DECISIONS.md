@@ -107,3 +107,19 @@ This file records load-bearing programme decisions. New decisions should append 
 **Rationale:** GitHub's GHSA-p2h2-3vg9-4p87 advisory identifies versions through 2.61.0 as affected by a local command-execution vulnerability in Codespaces SSH/log handling.
 
 **Status:** active.
+
+## D016 — T3 uses one atomic current file plus one bounded prior revision
+
+**Decision:** T3 stores `.cospaces/checkpoints/<task-id>.json` as current state and retains the immediately previous valid revision at `.cospaces/checkpoints/.history/<task-id>.json`. Writes use a temporary sibling, flush/fsync, and `os.replace`; a malformed current checkpoint is never overwritten automatically.
+
+**Rationale:** One retained revision provides practical recovery/diagnosis for long-horizon handoff without introducing a database or unbounded history. Refusing to overwrite corrupt state preserves evidence rather than hiding it.
+
+**Status:** active.
+
+## D017 — T3 captures bounded Git state but never source-control success by implication
+
+**Decision:** Checkpoint save captures repo/ref/HEAD plus aggregate dirty-state counts by default, with no filenames or environment dump. Saving performs no commit or push and machine results explicitly report `source_control_action = "none"`.
+
+**Rationale:** Continuation metadata must reveal whether uncommitted work existed without becoming a secret-bearing log or being mistaken for durable source-control publication.
+
+**Status:** active.

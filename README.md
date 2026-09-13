@@ -86,7 +86,29 @@ Live T2 execution requires GitHub CLI 2.62.0 or newer because earlier versions a
 
 The controller does not inspect or serialize its credential stores or environment. Task argv/stdout/stderr are caller-selected data and are captured by design, so do not execute commands that print secrets when the resulting run record will be retained or shared.
 
-The remaining six tool names stay routing stubs until their implementation issues land.
+## T3 checkpoint utility
+
+`checkpoint` stores durable continuation metadata under the target repository. It does not snapshot a process, commit code, push branches, or execute the recorded next step.
+
+```bash
+cospaces checkpoint save --task issue-42 --current "implement parser" --next "run tests" --last-run-id RUN-ID --json
+cospaces checkpoint show --task issue-42 --json
+cospaces checkpoint list --json
+cospaces checkpoint validate --task issue-42 --json
+cospaces checkpoint validate --task issue-42 --live --json
+```
+
+Current files live at `.cospaces/checkpoints/<task-id>.json`; one previous valid revision is retained at `.cospaces/checkpoints/.history/<task-id>.json`. Saves use a temporary sibling plus atomic replacement where the host filesystem supports it. A corrupt current checkpoint is never silently overwritten.
+
+By default `save` captures safe local Git context: normalized GitHub `owner/repo` when inferable, current ref, HEAD, and aggregate working-tree counts. It deliberately does not store filenames. `--no-git` disables that capture. Explicit `--repo`, `--ref`, and `--head` values override captured values.
+
+Progress, note, record-reference, and workspace fields are bounded. Omitted fields preserve the previous valid revision during an update. `--codespace NAME` uses T1 to store the normalized workspace identity; run references such as `--last-run-id` remain references rather than embedded T2 output.
+
+`validate --live` compares stored repo/ref/HEAD with the current repository and, when a workspace identity is present, compares it through T1. A meaningful mismatch is a non-successful validation rather than an automatic "resume". Ordinary `show` and `validate` never execute `progress.next`.
+
+Every save result states `source_control_action = "none"`: a repository-local checkpoint is not evidence that its contents or the implementation itself are committed or pushed.
+
+The remaining five tool names stay routing stubs until their implementation issues land.
 
 ## Opt-in live smoke tests
 
@@ -95,6 +117,14 @@ Routine CI uses mocked GitHub CLI/SSH responses and does not create or run billa
 ```bash
 cospaces workspace describe --codespace NAME --json
 cospaces run --codespace NAME --json -- git status --short
+```
+
+T3 itself does not require a live Codespace. A local repository smoke path is:
+
+```bash
+cospaces checkpoint save --task smoke --current "checkpoint smoke" --next "delete smoke checkpoint" --json
+cospaces checkpoint show --task smoke --json
+cospaces checkpoint validate --task smoke --live --json
 ```
 
 Creation is intentionally separate because it may incur Codespaces usage. If a disposable live creation test is desired, create it explicitly with T1, verify the returned identity, run the T2 smoke command, then stop it explicitly. The MVP never deletes or rebuilds a workspace automatically.
