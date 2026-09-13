@@ -23,4 +23,7 @@ class GitHubCliAdapter:
 
     def capture(self, arguments: tuple[str, ...]) -> CommandResult:
         command = self.prepare(arguments)
-        return self._process.capture(command.argv)
+        return self._process.capture(
+            command.argv,
+            environment={"GH_PROMPT_DISABLED": "1"},
+        )

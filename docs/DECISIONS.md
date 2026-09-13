@@ -81,3 +81,11 @@ This file records load-bearing programme decisions. New decisions should append 
 **Decision:** T5–T8 receive detailed issues now, but T1–T4 must not depend on their implementation. MVP may expose narrow internal hooks needed for later composition, but should not build unused frameworks.
 
 **Status:** active.
+
+## D013 — GitHub CLI prompting is disabled at the adapter boundary
+
+**Decision:** Controller-side GitHub CLI calls set `GH_PROMPT_DISABLED=1`. T1 creation also passes `--default-permissions`; callers must provide explicit machine/devcontainer choices when GitHub cannot select them non-interactively.
+
+**Rationale:** An autonomous task must fail visibly on unresolved creation choices rather than block on, or silently resolve through, an interactive selector. `--default-permissions` avoids an authorization prompt without granting requested additional permissions.
+
+**Status:** active.
