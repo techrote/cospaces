@@ -60,12 +60,13 @@ class CheckpointStore:
     def __init__(self, root: Path) -> None:
         self.root = root
         self.directory = root / ".cospaces" / "checkpoints"
+        self.history_directory = self.directory / ".history"
 
     def checkpoint_path(self, task_id: str) -> Path:
         return self.directory / f"{validate_task_id(task_id)}.json"
 
     def previous_path(self, task_id: str) -> Path:
-        return self.directory / f"{validate_task_id(task_id)}.previous.json"
+        return self.history_directory / f"{validate_task_id(task_id)}.json"
 
     @staticmethod
     def _failure(code: str, message: str) -> DomainFailure:
@@ -208,8 +209,6 @@ class CheckpointStore:
         except OSError:
             return ()
         for path in paths:
-            if path.name.endswith(".previous.json"):
-                continue
             task_id = path.name[:-5]
             loaded = self._read_path(path, expected_task=task_id)
             if loaded.ok:
