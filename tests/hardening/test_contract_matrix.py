@@ -2,7 +2,7 @@ import json
 
 from cospaces.domain.checkpoint import SCHEMA as CHECKPOINT_SCHEMA
 from cospaces.domain.contracts import DomainFailure, ExitStatus, FailureKind
-from cospaces.domain.results import SCHEMA as RESULT_SCHEMA, ResultEnvelope
+from cospaces.domain.results import ResultEnvelope, SCHEMA as RESULT_SCHEMA
 from cospaces.domain.verification import SCHEMA as VERIFY_SCHEMA
 
 
