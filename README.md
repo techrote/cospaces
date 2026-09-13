@@ -46,7 +46,7 @@ python -m cospaces --help
 cospaces --help
 ```
 
-Repository-local configuration begins at `.cospaces.toml`. The current foundation recognises only `cospaces.schema_version = 1`; unknown keys inside `[cospaces]` are rejected, while other top-level sections are retained as uninterpreted forward-compatible data for later tools.
+Repository-local configuration lives at `.cospaces.toml`. `[cospaces]` currently accepts only `schema_version = 1`; T4 consumes the separate `[verify.<plan>]` sections described below. Other top-level sections remain reserved for later tools.
 
 ## T1 workspace utility
 
@@ -108,15 +108,60 @@ Progress, note, record-reference, and workspace fields are bounded. Omitted fiel
 
 Every save result states `source_control_action = "none"`: a repository-local checkpoint is not evidence that its contents or the implementation itself are committed or pushed.
 
-The remaining five tool names stay routing stubs until their implementation issues land.
+## T4 verify utility
+
+`verify` runs a named repository-controlled plan through T2, sequentially, in one resolved Codespace:
+
+```bash
+cospaces verify default --repo owner/repo --ref main --json
+cospaces verify default --codespace NAME --task-id issue-42 --json
+```
+
+A minimal `.cospaces.toml` plan is:
+
+```toml
+[cospaces]
+schema_version = 1
+
+[verify.default]
+
+[[verify.default.checks]]
+name = "tests"
+command = ["python", "-m", "pytest", "-q"]
+timeout_seconds = 600
+required = true
+
+[[verify.default.checks]]
+name = "lint"
+command = ["python", "-m", "ruff", "check", "."]
+timeout_seconds = 120
+required = false
+working_directory = "."
+environment = { MODE = "ci" }
+```
+
+Commands are argv arrays, not shell strings. Check names are unique inside a plan. `working_directory` is repository-relative and cannot escape the checkout. Environment overrides must be explicit string values; verification records expose only their keys, not their configured values.
+
+All checks execute in declaration order. The first resolved Codespace is reused for the rest of the plan. A remote failure or timeout in a required check makes the aggregate verification fail with exit category `7`; the verifier still runs later declared checks. Optional failures/timeouts remain visible but do not fail the required aggregate. Configuration errors, workspace selection failures, and transport/control-plane failures retain their own exit categories rather than being relabelled as failed tests.
+
+Each invocation receives a unique `verification_id`. The `cospaces.verify/v1` record includes plan/task/correlation IDs, repository/ref/HEAD provenance when established, workspace identity, timestamps, aggregate `complete`/`passed` flags, and per-check T2 `run_id`, exit/timeout/completion summary, duration and failure code. T3 can store the verification ID in `records.last_verification_id`.
+
+For v0.1, the JSON result on stdout is authoritative; T4 does not create a persistent report file automatically. It also does not replace code review or invent product-correctness criteria—the repository declares what verification means.
+
+## MVP boundary
+
+T1–T4 complete the intended first implementation tranche. Before beginning T5–T8, follow the Phase 1 hardening gate in `docs/ROADMAP.md`: review schemas/contracts, perform disposable live Codespace smoke exercises, test stop/reconnect/checkpoint recovery, exercise verify-pass and verify-fail paths, and reconcile documentation.
+
+The remaining four tool names stay routing stubs until that gate is deliberately passed.
 
 ## Opt-in live smoke tests
 
-Routine CI uses mocked GitHub CLI/SSH responses and does not create or run billable Codespaces. With an already-existing disposable Codespace, T1/T2 smoke checks are:
+Routine CI uses mocked GitHub CLI/SSH responses and does not create or run billable Codespaces. With an already-existing disposable Codespace, T1/T2/T4 smoke checks are:
 
 ```bash
 cospaces workspace describe --codespace NAME --json
 cospaces run --codespace NAME --json -- git status --short
+cospaces verify default --codespace NAME --json
 ```
 
 T3 itself does not require a live Codespace. A local repository smoke path is:
@@ -127,4 +172,4 @@ cospaces checkpoint show --task smoke --json
 cospaces checkpoint validate --task smoke --live --json
 ```
 
-Creation is intentionally separate because it may incur Codespaces usage. If a disposable live creation test is desired, create it explicitly with T1, verify the returned identity, run the T2 smoke command, then stop it explicitly. The MVP never deletes or rebuilds a workspace automatically.
+Creation is intentionally separate because it may incur Codespaces usage. If a disposable live creation test is desired, create it explicitly with T1, verify the returned identity, run the T2/T4 smoke commands, then stop it explicitly. The MVP never deletes or rebuilds a workspace automatically.
