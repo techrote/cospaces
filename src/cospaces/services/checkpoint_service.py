@@ -92,7 +92,10 @@ class CheckpointService:
         existing = None
         if existing_result.ok:
             existing = existing_result.document
-        elif existing_result.failure is None or existing_result.failure.code != "checkpoint_not_found":
+        elif (
+            existing_result.failure is None
+            or existing_result.failure.code != "checkpoint_not_found"
+        ):
             return CheckpointActionResult(failure=existing_result.failure)
 
         context = None
@@ -141,7 +144,11 @@ class CheckpointService:
                 completed=request.completed
                 if request.completed is not None
                 else existing_progress.completed,
-                current=request.current if request.current is not None else existing_progress.current,
+                current=(
+                    request.current
+                    if request.current is not None
+                    else existing_progress.current
+                ),
                 next_step=request.next_step
                 if request.next_step is not None
                 else existing_progress.next_step,
@@ -157,7 +164,11 @@ class CheckpointService:
                 if request.record_paths is not None
                 else existing_records.paths,
             ),
-            notes=request.notes if request.notes is not None else (existing.notes if existing else ""),
+            notes=(
+                request.notes
+                if request.notes is not None
+                else (existing.notes if existing else "")
+            ),
         )
         try:
             validated = checkpoint_from_dict(document.to_dict())
