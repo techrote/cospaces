@@ -1,6 +1,6 @@
 import json
 
-from cospaces.cli import build_parser
+from cospaces.cli import build_parser, main
 from cospaces.domain.run import RunRecord
 from cospaces.domain.workspace import WorkspaceIdentity
 from cospaces.run_dispatch import parse_timeout, run_remote
@@ -113,3 +113,37 @@ def test_run_json_is_one_document_and_metadata_is_preserved(capsys) -> None:
     assert payload["result"]["run_id"] == "11111111-1111-4111-8111-111111111111"
     assert payload["result"]["command"] == ["printf", "%s", "a b"]
     assert payload["result"]["transport"] == "gh-codespace-ssh"
+
+
+def test_missing_double_dash_fails_before_workspace_lookup(capsys) -> None:
+    status = main(
+        ["run", "--codespace", "space-one", "--json", "printf", "hello"]
+    )
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert status == 2
+    assert captured.err == ""
+    assert payload["error"]["code"] == "remote_argv_required"
+    assert payload["result"]["remote_completion"] == "not_started"
+
+
+def test_invalid_timeout_fails_before_workspace_lookup(capsys) -> None:
+    status = main(
+        [
+            "run",
+            "--codespace",
+            "space-one",
+            "--timeout",
+            "not-a-duration",
+            "--json",
+            "--",
+            "true",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert status == 2
+    assert captured.err == ""
+    assert payload["error"]["code"] == "invalid_timeout"
