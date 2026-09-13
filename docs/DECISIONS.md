@@ -155,3 +155,27 @@ This file records load-bearing programme decisions. New decisions should append 
 **Rationale:** Live smoke may start billable compute. Passing network-free CI is not evidence that real Codespaces behavior has been exercised, and the project must not spend or mutate lifecycle implicitly merely to satisfy a roadmap checkbox.
 
 **Status:** active.
+
+## D022 — Remote provenance must be observed remotely
+
+**Decision:** A verification/evidence field that purports to identify remote Codespace state must come from remote/workspace evidence. T4 v1 does not currently observe the remote Git commit SHA, so its `head` field is null. Controller-local HEAD must not be copied into a remote result merely because repository/ref strings match.
+
+**Rationale:** A branch may advance, a Codespace may be stale, or the controller checkout may differ despite equal ref names. Fabricated precision is worse than an explicit unknown value.
+
+**Status:** active.
+
+## D023 — Selection and verification containment fail closed under uncertainty
+
+**Decision:** T1 does not claim a unique ref match while any relevant candidate has unknown ref metadata. T4 physically resolves its repository root and configured working directory and rejects targets that escape through symlinks. T4 environment/setup/containment failures are infrastructure failures, not repository assertion failures.
+
+**Rationale:** Autonomous orchestration must not turn missing metadata or path indirection into implicit authority to guess a target or execute outside the declared repository boundary.
+
+**Status:** active.
+
+## D024 — T2 process/output resource hardening remains explicit debt
+
+**Decision:** v0.1 continues to use the standard-library process adapter with captured stdout/stderr. The controller will not claim bounded output or guaranteed descendant/remote termination on timeout until a dedicated adapter hardening change implements and tests those properties.
+
+**Rationale:** Truncating output only after unbounded capture does not solve memory pressure, and killing the direct SSH client does not prove remote termination. The limitation is tracked explicitly rather than papered over.
+
+**Status:** active limitation.
