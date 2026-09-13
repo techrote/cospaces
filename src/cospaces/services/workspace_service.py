@@ -80,6 +80,12 @@ class WorkspaceService:
                 kind=FailureKind.INFRASTRUCTURE,
                 message="GitHub CLI authentication is unavailable",
             )
+        if "not found" in stderr or "no codespace" in stderr:
+            return None, DomainFailure(
+                code="workspace_not_found",
+                kind=FailureKind.SELECTION,
+                message="The requested Codespace was not found",
+            )
         return None, DomainFailure(
             code="codespaces_control_plane_error",
             kind=FailureKind.INFRASTRUCTURE,
@@ -198,7 +204,14 @@ class WorkspaceService:
             return listed
         candidates = list(listed.workspaces)
         if ref is not None:
-            candidates = [workspace for workspace in candidates if workspace.ref == ref]
+            matching = [workspace for workspace in candidates if workspace.ref == ref]
+            if not matching and any(workspace.ref is None for workspace in candidates):
+                return self._failure(
+                    "workspace_ref_unknown",
+                    "Cannot establish the ref for one or more candidate workspaces",
+                    kind=FailureKind.SELECTION,
+                )
+            candidates = matching
         if not candidates:
             return self._failure(
                 "workspace_not_found",
