@@ -45,9 +45,7 @@ class FakeService:
 
 
 def test_workspace_list_json_is_one_parseable_document(capsys) -> None:
-    namespace = build_parser().parse_args(
-        ["workspace", "list", "--repo", "owner/repo", "--json"]
-    )
+    namespace = build_parser().parse_args(["workspace", "list", "--repo", "owner/repo", "--json"])
     service = FakeService(WorkspaceActionResult(workspaces=(identity(),)))
 
     status = run_workspace(namespace, service)  # type: ignore[arg-type]
@@ -63,9 +61,7 @@ def test_workspace_list_json_is_one_parseable_document(capsys) -> None:
 
 
 def test_workspace_selection_failure_has_selection_exit_code(capsys) -> None:
-    namespace = build_parser().parse_args(
-        ["workspace", "ensure", "--repo", "owner/repo", "--json"]
-    )
+    namespace = build_parser().parse_args(["workspace", "ensure", "--repo", "owner/repo", "--json"])
     failure = DomainFailure(
         code="ambiguous_workspace",
         kind=FailureKind.SELECTION,
