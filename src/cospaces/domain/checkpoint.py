@@ -17,7 +17,9 @@ _WORKSPACE_KEYS = {"name", "repository", "ref", "state", "display_name", "machin
 
 def validate_task_id(value: str) -> str:
     if value in {".", ".."} or TASK_ID_RE.fullmatch(value) is None:
-        raise ValueError("task ID must use 1-128 alphanumeric/._- characters and cannot traverse paths")
+        raise ValueError(
+            "task ID must use 1-128 alphanumeric/._- characters and cannot traverse paths"
+        )
     return value
 
 
@@ -191,7 +193,11 @@ def checkpoint_from_dict(payload: Mapping[str, Any]) -> CheckpointDocument:
         raise ValueError("records must be an object")
     if set(records_payload) - {"last_run_id", "last_verification_id", "paths"}:
         raise ValueError("records contains unsupported keys")
-    last_run_id = _bounded_text(records_payload.get("last_run_id"), "records.last_run_id", MAX_ITEM_CHARS)
+    last_run_id = _bounded_text(
+        records_payload.get("last_run_id"),
+        "records.last_run_id",
+        MAX_ITEM_CHARS,
+    )
     last_verification_id = _bounded_text(
         records_payload.get("last_verification_id"),
         "records.last_verification_id",
