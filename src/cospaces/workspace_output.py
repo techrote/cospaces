@@ -25,7 +25,7 @@ def emit_failure(namespace: argparse.Namespace, result: WorkspaceActionResult) -
 def emit_success(namespace: argparse.Namespace, result: WorkspaceActionResult) -> int:
     operation = operation_name(namespace)
     if namespace.workspace_operation == "list":
-        payload = [workspace.to_dict() for workspace in result.workspaces]
+        payload = [item.to_dict() for item in result.workspaces]
         if namespace.json_output:
             print(
                 success_result(
@@ -34,14 +34,14 @@ def emit_success(namespace: argparse.Namespace, result: WorkspaceActionResult) -
                 ).to_json()
             )
         else:
-            for workspace in result.workspaces:
+            for item in result.workspaces:
                 print(
                     "\t".join(
                         (
-                            workspace.name,
-                            workspace.repository or "?",
-                            workspace.ref or "?",
-                            workspace.state,
+                            item.name,
+                            item.repository or "?",
+                            item.ref or "?",
+                            item.state,
                         )
                     )
                 )
