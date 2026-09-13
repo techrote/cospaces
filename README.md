@@ -50,7 +50,7 @@ Repository-local configuration begins at `.cospaces.toml`. The current foundatio
 
 ## T1 workspace utility
 
-`workspace` is the first implemented programme tool. Typical machine-readable operations are:
+Typical machine-readable operations are:
 
 ```bash
 cospaces workspace list --repo owner/repo --json
@@ -65,16 +65,36 @@ Selection is deterministic. An explicit Codespace name is validated against the 
 
 Workspace JSON normalises available GitHub data to `name`, `repository`, `ref`, `state`, `display_name`, and `machine`; unavailable metadata remains null/unknown. Normalised states are `available`, `shutdown`, `starting`, or `unknown`.
 
-The other seven tool names remain routing stubs until their implementation issues land.
+## T2 run utility
 
-### Opt-in live smoke test
-
-Routine CI uses mocked GitHub CLI responses and does not create billable Codespaces. With an already-existing disposable Codespace, read-only smoke checks are:
+`run` executes one non-interactive argv inside exactly one Codespace. The task boundary after `--` is mandatory:
 
 ```bash
-cospaces workspace list --repo owner/repo --json
-cospaces workspace describe --codespace NAME --json
-cospaces workspace ensure --repo owner/repo --codespace NAME --json
+cospaces run --codespace NAME -- git status --short
+cospaces run --codespace NAME --timeout 2m --json -- python -m pytest -q
+cospaces run --repo owner/repo --ref main --json -- python -m pytest -q
+cospaces run --codespace NAME --task-id issue-42 --correlation-id agent-pass-3 --json -- git status --short
 ```
 
-Creation is intentionally separate because it may incur Codespaces usage. If a disposable live creation test is desired, supply explicit machine/devcontainer choices required by the repository, verify the returned workspace identity, then stop it explicitly with `cospaces workspace stop --codespace NAME --json`. T1 never deletes or rebuilds a workspace automatically.
+An explicit Codespace is described through T1 before execution. Repository targeting delegates to T1's deterministic repository/ref resolver. T2 never creates a workspace and never retries the remote task implicitly.
+
+JSON records include a unique `run_id`, caller metadata, timeout, observed exit status, timeout state, remote-completion state, duration/timestamps, captured output, workspace identity, and `transport = "gh-codespace-ssh"`. A remote non-zero status exits in category 5; controller/SSH transport failure is category 3; selection failure is category 4.
+
+The SSH transport has deliberate truthfulness limits: status 255 is transport/ambiguous, stderr can contain both remote stderr and SSH diagnostics, and a controller timeout does not prove the remote process stopped. These states are represented explicitly instead of guessed.
+
+Live T2 execution requires GitHub CLI 2.62.0 or newer because earlier versions are affected by GitHub's Codespaces SSH security advisory. The target Codespace must also provide an SSH server.
+
+The controller does not inspect or serialize its credential stores or environment. Task argv/stdout/stderr are caller-selected data and are captured by design, so do not execute commands that print secrets when the resulting run record will be retained or shared.
+
+The remaining six tool names stay routing stubs until their implementation issues land.
+
+## Opt-in live smoke tests
+
+Routine CI uses mocked GitHub CLI/SSH responses and does not create or run billable Codespaces. With an already-existing disposable Codespace, T1/T2 smoke checks are:
+
+```bash
+cospaces workspace describe --codespace NAME --json
+cospaces run --codespace NAME --json -- git status --short
+```
+
+Creation is intentionally separate because it may incur Codespaces usage. If a disposable live creation test is desired, create it explicitly with T1, verify the returned identity, run the T2 smoke command, then stop it explicitly. The MVP never deletes or rebuilds a workspace automatically.
