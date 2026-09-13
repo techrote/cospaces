@@ -165,3 +165,70 @@ def test_required_failure_sets_verification_exit_and_continues(tmp_path: Path) -
     assert result.record.passed is False
     assert [check.passed for check in result.record.checks] == [False, True]
     assert len(runner.requests) == 2
+
+
+def test_optional_failure_remains_visible_but_aggregate_passes(tmp_path: Path) -> None:
+    write_plan(tmp_path, optional_first=True)
+    failure = DomainFailure(
+        code="remote_task_failed",
+        kind=FailureKind.REMOTE,
+        message="optional failed",
+    )
+    runner = FakeRunService(
+        [outcome("run-1", exit_code=9, failure=failure), outcome("run-2")]
+    )
+    service = VerificationService(tmp_path, run_service=runner)  # type: ignore[arg-type]
+
+    result = service.verify(VerificationRequest(codespace="space-one"))
+
+    assert result.ok
+    assert result.record is not None
+    assert result.record.passed is True
+    assert result.record.checks[0].required is False
+    assert result.record.checks[0].passed is False
+    assert result.record.checks[0].failure_code == "remote_task_failed"
+
+
+def test_required_timeout_is_verification_failure(tmp_path: Path) -> None:
+    write_plan(tmp_path)
+    timeout = DomainFailure(
+        code="remote_timeout",
+        kind=FailureKind.REMOTE,
+        message="timed out",
+    )
+    runner = FakeRunService(
+        [outcome("run-1", exit_code=None, timed_out=True, failure=timeout), outcome("run-2")]
+    )
+    service = VerificationService(tmp_path, run_service=runner)  # type: ignore[arg-type]
+
+    result = service.verify(VerificationRequest(codespace="space-one"))
+
+    assert not result.ok
+    assert result.failure is not None
+    assert int(result.failure.exit_status) == 7
+    assert result.record is not None
+    assert result.record.checks[0].timed_out is True
+    assert result.record.checks[0].failure_code == "remote_timeout"
+
+
+def test_infrastructure_failure_aborts_without_becoming_check_assertion(tmp_path: Path) -> None:
+    write_plan(tmp_path)
+    failure = DomainFailure(
+        code="transport_failure",
+        kind=FailureKind.INFRASTRUCTURE,
+        message="transport unavailable",
+    )
+    runner = FakeRunService(
+        [outcome("run-1", exit_code=255, failure=failure), outcome("run-2")]
+    )
+    service = VerificationService(tmp_path, run_service=runner)  # type: ignore[arg-type]
+
+    result = service.verify(VerificationRequest(codespace="space-one"))
+
+    assert not result.ok
+    assert result.failure == failure
+    assert int(result.failure.exit_status) == 3
+    assert result.record is not None
+    assert result.record.complete is False
+    assert len(result.record.checks) == 1
+    assert len(runner.requests) == 1
