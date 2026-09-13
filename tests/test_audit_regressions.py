@@ -76,9 +76,7 @@ def test_run_rejects_nul_argv_before_workspace_lookup() -> None:
         transport=UnexpectedTransport(),  # type: ignore[arg-type]
     )
 
-    result = service.execute(
-        RunRequest(argv=("printf", "bad\x00value"), codespace="space-one")
-    )
+    result = service.execute(RunRequest(argv=("printf", "bad\x00value"), codespace="space-one"))
 
     assert not result.ok
     assert result.failure is not None
