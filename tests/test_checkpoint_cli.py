@@ -40,9 +40,7 @@ def test_checkpoint_save_show_list_validate_json_contract(tmp_path, capsys) -> N
     assert save_payload["result"]["checkpoint"]["records"]["last_run_id"] == "run-123"
     assert save_payload["result"]["source_control_action"] == "none"
 
-    show_status = main(
-        ["checkpoint", "show", "--task", "issue-4", "--root", root, "--json"]
-    )
+    show_status = main(["checkpoint", "show", "--task", "issue-4", "--root", root, "--json"])
     show_payload = json.loads(capsys.readouterr().out)
     assert show_status == 0
     assert show_payload["operation"] == "checkpoint.show"
