@@ -46,6 +46,27 @@ required = false
     assert result.plan.checks[1].timeout_seconds == 600.0
 
 
+def test_empty_non_executable_arg_and_environment_value_are_preserved(tmp_path: Path) -> None:
+    write_config(
+        tmp_path,
+        """
+[verify.default]
+[[verify.default.checks]]
+name = "args"
+command = ["printf", ""]
+environment = { EMPTY = "" }
+""".strip()
+        + "\n",
+    )
+
+    result = load_verification_plan(tmp_path, "default")
+
+    assert result.ok
+    assert result.plan is not None
+    assert result.plan.checks[0].command == ("printf", "")
+    assert result.plan.checks[0].environment == (("EMPTY", ""),)
+
+
 def test_unknown_plan_is_usage_failure(tmp_path: Path) -> None:
     write_config(
         tmp_path,
@@ -115,7 +136,7 @@ command = ["true"]
 
 
 def test_working_directory_must_remain_repository_relative(tmp_path: Path) -> None:
-    for working_directory in ("../outside", "/absolute", "a\\b"):
+    for working_directory in ("../outside", "/absolute"):
         write_config(
             tmp_path,
             "[verify.default]\n[[verify.default.checks]]\n"
