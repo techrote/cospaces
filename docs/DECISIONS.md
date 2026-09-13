@@ -179,3 +179,13 @@ This file records load-bearing programme decisions. New decisions should append 
 **Rationale:** Truncating output only after unbounded capture does not solve memory pressure, and killing the direct SSH client does not prove remote termination. The limitation is tracked explicitly rather than papered over.
 
 **Status:** active limitation.
+
+## D025 — External host qualification uses repository-owned warm workload machinery
+
+**Decision:** `tools/external_workload.py` exposes a bounded warm workload with schema `cospaces.external-workload/v1` for measurement by foreign hosts/orchestrators. It is supporting repository machinery, not a ninth product tool and not early implementation of T6 `fixture`.
+
+**Rationale:** The codebase being measured should own the exact workload definition so external qualification can pin a commit and compare like with like. Host access, cold clone/install measurement, scheduling, provider policy, evidence retention and interpretation remain the external orchestrator's responsibility.
+
+**Safety:** Successful stage logs are not embedded in results; stage output is spooled to disposable files, failure diagnostics are bounded, environment variables/hostname/user paths are not serialized, repetitions/timeouts are bounded, and package build uses `--no-isolation` so the warm profile requires no package-network access after dependencies are installed.
+
+**Status:** active.
