@@ -112,11 +112,9 @@ class VerificationService:
         repository: str | None,
         ref: str | None,
     ) -> bool:
-        if context is None:
+        if context is None or repository is None or ref is None:
             return False
-        repository_matches = repository is None or repository == context.repository
-        ref_matches = ref is None or ref == context.ref
-        return repository_matches and ref_matches
+        return repository == context.repository and ref == context.ref
 
     def verify(self, request: VerificationRequest) -> VerificationActionResult:
         loaded = load_verification_plan(self.root, request.plan)
@@ -175,11 +173,14 @@ class VerificationService:
                     provenance_repository = run_result.workspace.repository
                 if run_result.workspace.ref is not None:
                     provenance_ref = run_result.workspace.ref
-                if not self._head_matches_workspace(
+                if self._head_matches_workspace(
                     context,
                     run_result.workspace.repository,
                     run_result.workspace.ref,
                 ):
+                    assert context is not None
+                    head = context.head
+                else:
                     head = None
 
             if run_result.failure is not None:
