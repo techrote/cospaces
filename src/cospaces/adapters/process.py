@@ -1,4 +1,4 @@
-"""Process adapter module."""
+"""Process adapter primitives."""
 
 from dataclasses import dataclass
 
@@ -9,3 +9,7 @@ class CommandResult:
     returncode: int
     stdout: str
     stderr: str
+
+
+class ProcessAdapter:
+    """Marker boundary for controller-side process adapters."""
