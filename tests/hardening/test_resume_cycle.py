@@ -19,14 +19,17 @@ class StableProbe:
         )
 
 
-class StableWorkspace:
+class WorkspaceAtState:
+    def __init__(self, state: str) -> None:
+        self.state = state
+
     def describe(self, name: str) -> WorkspaceActionResult:
         return WorkspaceActionResult(
             workspace=WorkspaceIdentity(
                 name=name,
                 repository="owner/repo",
                 ref="feature/hardening",
-                state="shutdown",
+                state=self.state,
                 display_name="hardening-space",
                 machine="standardLinux32gb",
             )
@@ -37,7 +40,7 @@ def test_checkpoint_survives_controller_reconstruction_without_executing_next(tm
     initial = CheckpointService(
         tmp_path,
         probe=StableProbe(),  # type: ignore[arg-type]
-        workspace=StableWorkspace(),  # type: ignore[arg-type]
+        workspace=WorkspaceAtState("available"),  # type: ignore[arg-type]
     )
     saved = initial.save(
         CheckpointSaveRequest(
@@ -59,11 +62,13 @@ def test_checkpoint_survives_controller_reconstruction_without_executing_next(tm
 
     assert saved.ok
     assert saved.document is not None
+    assert saved.document.workspace is not None
+    assert saved.document.workspace["state"] == "available"
 
     reconstructed = CheckpointService(
         tmp_path,
         probe=StableProbe(),  # type: ignore[arg-type]
-        workspace=StableWorkspace(),  # type: ignore[arg-type]
+        workspace=WorkspaceAtState("shutdown"),  # type: ignore[arg-type]
     )
     shown = reconstructed.show("hardening-cycle")
     validated = reconstructed.validate("hardening-cycle", live=True)
