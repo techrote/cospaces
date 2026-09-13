@@ -41,20 +41,25 @@ An agent can acquire a Codespace, run work, checkpoint state, and run authoritat
 
 ## Phase 1 hardening gate
 
-Before starting broad Phase 2 implementation, perform at least:
-- contract review of JSON schema/versioning;
-- integration smoke test against a real disposable Codespace;
-- ambiguity/failure-path tests;
-- checkpoint stop/reconnect/resume exercise;
-- verify-pass and verify-fail exercises;
+Issue #18 converts this gate into executable repository machinery.
+
+Automated/network-free hardening is enforced in ordinary CI through `python tools/hardening_smoke.py --json` and covers:
+- JSON schema/version and exit-code contracts;
+- workspace ambiguity/failure paths;
+- run timeout/transport/remote-failure distinctions;
+- checkpoint corruption/history plus reconstructed-controller continuation;
+- cross-tool workspace/run/verification references;
+- verify-pass and verify-fail composition through the real parser/config/service/output stack over fake T2;
 - documentation reconciliation.
 
-A separate hardening issue may be created after T4 if evidence warrants it.
+The real disposable-Codespace smoke remains an explicit evidence sub-gate. It is **pending until deliberately executed** with `tools/live_codespace_smoke.py --codespace NAME`; ordinary CI must not create or run a billable Codespace. See `docs/HARDENING.md`.
+
+Phase 2 remains deferred while this live evidence is pending unless a later explicit decision supersedes the gate.
 
 ## Phase 2 — planned tools
 
 ### 5. T5 `capabilities`
-Add live environment introspection once the controller/workspace contracts are stable.
+Add live environment introspection once the controller/workspace contracts are stable and the Phase 1 hardening gate is passed.
 
 ### 6. T6 `fixture`
 Add reproducible experiment/benchmark definitions using T2 run records.
