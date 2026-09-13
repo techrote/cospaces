@@ -71,7 +71,7 @@ def test_unknown_plan_is_usage_failure(tmp_path: Path) -> None:
     write_config(
         tmp_path,
         "[cospaces]\nschema_version = 1\n[verify.default]\n"
-        "[[verify.default.checks]]\nname = \"tests\"\ncommand = [\"true\"]\n",
+        '[[verify.default.checks]]\nname = "tests"\ncommand = ["true"]\n',
     )
 
     result = load_verification_plan(tmp_path, "release")
@@ -153,7 +153,7 @@ def test_working_directory_must_remain_repository_relative(tmp_path: Path) -> No
 def test_command_must_be_nonempty_array(tmp_path: Path) -> None:
     write_config(
         tmp_path,
-        "[verify.default]\n[[verify.default.checks]]\nname = \"tests\"\ncommand = []\n",
+        '[verify.default]\n[[verify.default.checks]]\nname = "tests"\ncommand = []\n',
     )
 
     result = load_verification_plan(tmp_path, "default")
