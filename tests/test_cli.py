@@ -16,14 +16,14 @@ def test_no_tool_prints_help(capsys) -> None:
 
 
 def test_deferred_tool_json_is_parseable_and_prose_free(capsys) -> None:
-    status = main(["run", "--json"])
+    status = main(["checkpoint", "--json"])
 
     captured = capsys.readouterr()
     payload = json.loads(captured.out)
     assert status == 1
     assert captured.err == ""
     assert payload["schema"] == "cospaces.result/v1"
-    assert payload["operation"] == "run"
+    assert payload["operation"] == "checkpoint"
     assert payload["ok"] is False
     assert payload["error"]["code"] == "not_implemented"
 

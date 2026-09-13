@@ -8,6 +8,8 @@ from typing import cast
 from . import __version__
 from .domain.contracts import DomainFailure, FailureKind
 from .domain.results import failure_result
+from .run_cli import add_run_parser
+from .run_dispatch import run_remote
 from .services.tool_registry import PLANNED_TOOLS
 from .workspace_cli import add_workspace_parser
 from .workspace_dispatch import run_workspace
@@ -21,8 +23,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparsers = parser.add_subparsers(dest="tool", title="tools")
     add_workspace_parser(subparsers)
+    add_run_parser(subparsers)
     for tool in PLANNED_TOOLS:
-        if tool == "workspace":
+        if tool in {"workspace", "run"}:
             continue
         child = subparsers.add_parser(tool, help=f"{tool} tool (planned)")
         child.add_argument("--json", action="store_true", dest="json_output")
@@ -51,6 +54,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if tool == "workspace":
         return run_workspace(namespace)
+    if tool == "run":
+        return run_remote(namespace)
     return _planned_tool(tool, json_output=bool(namespace.json_output))
 
 
