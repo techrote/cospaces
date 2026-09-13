@@ -139,3 +139,19 @@ This file records load-bearing programme decisions. New decisions should append 
 **Rationale:** The aggregate must be sufficient for an agent to decide required pass/fail and trace evidence without multiplying potentially sensitive/unbounded output. T3 already provides a durable `last_verification_id` reference.
 
 **Status:** active.
+
+## D020 — Phase 1 hardening is a CI-enforced contract suite, not a fifth tool
+
+**Decision:** The post-MVP hardening gate is implemented as cross-tool tests plus `tools/hardening_smoke.py`, which re-runs the complete network-free T1–T4 test suite and emits one machine-readable hardening record. It is not added to the eight-tool CLI surface.
+
+**Rationale:** Hardening validates the contracts already implemented; presenting it as another product tool would blur the programme boundary and duplicate orchestration concepts.
+
+**Status:** active.
+
+## D021 — Real Codespace hardening evidence requires explicit opt-in
+
+**Decision:** The live hardening harness requires the caller to name an existing Codespace. It has no workspace creation, deletion, or rebuild path; stopping afterward requires an explicit `--stop-after`. Phase 2 remains deferred while the real-Codespace smoke is recorded as pending, unless a later explicit decision supersedes this gate.
+
+**Rationale:** Live smoke may start billable compute. Passing network-free CI is not evidence that real Codespaces behavior has been exercised, and the project must not spend or mutate lifecycle implicitly merely to satisfy a roadmap checkbox.
+
+**Status:** active.
