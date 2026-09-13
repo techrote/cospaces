@@ -1,28 +1,12 @@
 from pathlib import Path
 from uuid import UUID
 
-from cospaces.domain.checkpoint import WorkingTreeState
 from cospaces.domain.contracts import DomainFailure, FailureKind
 from cospaces.domain.run import RunRecord
 from cospaces.domain.workspace import WorkspaceIdentity
-from cospaces.services.repository_probe import RepositoryContext, RepositoryProbeResult
 from cospaces.services.run_service import RunActionResult
 from cospaces.services.verification_service import VerificationRequest, VerificationService
-
-
-class FakeProbe:
-    def capture(self) -> RepositoryProbeResult:
-        return RepositoryProbeResult(
-            context=RepositoryContext(
-                repository="owner/repo",
-                ref="main",
-                head="abc123",
-                working_tree=WorkingTreeState(
-                    dirty=False,
-                    summary="modified=0;added=0;deleted=0;renamed=0;untracked=0;conflicted=0",
-                ),
-            )
-        )
+from cospaces.verification_command import VERIFY_SETUP_MARKER
 
 
 class FakeRunService:
@@ -52,6 +36,7 @@ def outcome(
     exit_code: int | None = 0,
     timed_out: bool = False,
     failure: DomainFailure | None = None,
+    stderr: str = "",
 ) -> RunActionResult:
     return RunActionResult(
         workspace=workspace(),
@@ -68,7 +53,7 @@ def outcome(
             ),
             transport="gh-codespace-ssh",
             stdout="",
-            stderr="",
+            stderr=stderr,
             stderr_mixed=True,
             duration_seconds=0.125,
             started_at="2026-09-13T20:00:00Z",
@@ -106,11 +91,7 @@ required = true
 def test_checks_run_sequentially_and_lock_first_workspace(tmp_path: Path) -> None:
     write_plan(tmp_path)
     runner = FakeRunService([outcome("run-1"), outcome("run-2")])
-    service = VerificationService(
-        tmp_path,
-        run_service=runner,  # type: ignore[arg-type]
-        probe=FakeProbe(),  # type: ignore[arg-type]
-    )
+    service = VerificationService(tmp_path, run_service=runner)  # type: ignore[arg-type]
 
     result = service.verify(
         VerificationRequest(
@@ -138,7 +119,7 @@ def test_checks_run_sequentially_and_lock_first_workspace(tmp_path: Path) -> Non
     assert UUID(result.record.verification_id)
     assert result.record.repository == "owner/repo"
     assert result.record.ref == "main"
-    assert result.record.head == "abc123"
+    assert result.record.head is None
     assert result.record.workspace is not None
     assert result.record.workspace["name"] == "space-one"
 
@@ -226,4 +207,36 @@ def test_infrastructure_failure_aborts_without_becoming_check_assertion(tmp_path
     assert result.record is not None
     assert result.record.complete is False
     assert len(result.record.checks) == 1
+    assert len(runner.requests) == 1
+
+
+def test_repository_setup_failure_is_infrastructure_not_assertion(tmp_path: Path) -> None:
+    write_plan(tmp_path)
+    remote_failure = DomainFailure(
+        code="remote_task_failed",
+        kind=FailureKind.REMOTE,
+        message="remote failed",
+    )
+    runner = FakeRunService(
+        [
+            outcome(
+                "run-1",
+                exit_code=99,
+                failure=remote_failure,
+                stderr=f"{VERIFY_SETUP_MARKER}:escape\n",
+            ),
+            outcome("run-2"),
+        ]
+    )
+    service = VerificationService(tmp_path, run_service=runner)  # type: ignore[arg-type]
+
+    result = service.verify(VerificationRequest(codespace="space-one"))
+
+    assert not result.ok
+    assert result.failure is not None
+    assert result.failure.code == "verification_environment_error"
+    assert int(result.failure.exit_status) == 3
+    assert result.record is not None
+    assert result.record.complete is False
+    assert result.record.checks[0].failure_code == "verification_environment_error"
     assert len(runner.requests) == 1
