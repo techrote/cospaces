@@ -41,9 +41,7 @@ def test_live_validation_reports_workspace_ref_mismatch(tmp_path) -> None:
         probe=FakeProbe(),  # type: ignore[arg-type]
         workspace=workspace,  # type: ignore[arg-type]
     )
-    assert service.save(
-        CheckpointSaveRequest(task_id="issue-4", codespace="space-one")
-    ).ok
+    assert service.save(CheckpointSaveRequest(task_id="issue-4", codespace="space-one")).ok
     workspace.ref = "feature"
 
     validated = service.validate("issue-4", live=True)
