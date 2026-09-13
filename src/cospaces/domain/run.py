@@ -9,3 +9,6 @@ class RunRequest:
     codespace: str | None = None
     repository: str | None = None
     ref: str | None = None
+    timeout_seconds: float = 600.0
+    task_id: str | None = None
+    correlation_id: str | None = None
