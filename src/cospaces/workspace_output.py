@@ -1,9 +1,10 @@
 """Workspace output module."""
 
 import argparse
+import json
 import sys
 
-from cospaces.domain.results import failure_result
+from cospaces.domain.results import failure_result, success_result
 from cospaces.services.workspace_service import WorkspaceActionResult
 
 
@@ -19,3 +20,48 @@ def emit_failure(namespace: argparse.Namespace, result: WorkspaceActionResult) -
     else:
         print(failure.message, file=sys.stderr)
     return int(failure.exit_status)
+
+
+def emit_success(namespace: argparse.Namespace, result: WorkspaceActionResult) -> int:
+    operation = operation_name(namespace)
+    if namespace.workspace_operation == "list":
+        payload = [workspace.to_dict() for workspace in result.workspaces]
+        if namespace.json_output:
+            print(
+                success_result(
+                    operation,
+                    result={"count": len(payload), "workspaces": payload},
+                ).to_json()
+            )
+        else:
+            for workspace in result.workspaces:
+                print(
+                    "\t".join(
+                        (
+                            workspace.name,
+                            workspace.repository or "?",
+                            workspace.ref or "?",
+                            workspace.state,
+                        )
+                    )
+                )
+        return 0
+
+    workspace = result.workspace
+    assert workspace is not None
+    details: dict[str, object] = {}
+    if result.created:
+        details["created"] = True
+    if result.stopped is not None:
+        details["stopped"] = result.stopped
+    if namespace.json_output:
+        print(
+            success_result(
+                operation,
+                workspace=workspace.to_dict(),
+                result=details,
+            ).to_json()
+        )
+    else:
+        print(json.dumps(workspace.to_dict(), sort_keys=True))
+    return 0
