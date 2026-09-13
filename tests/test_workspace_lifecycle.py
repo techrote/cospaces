@@ -11,7 +11,13 @@ class FakeGitHub(GitHubCliAdapter):
         self.responses = responses
         self.calls: list[tuple[str, ...]] = []
 
-    def capture(self, arguments: tuple[str, ...]) -> CommandResult:
+    def capture(
+        self,
+        arguments: tuple[str, ...],
+        *,
+        timeout_seconds: float | None = None,
+    ) -> CommandResult:
+        del timeout_seconds
         self.calls.append(arguments)
         return self.responses.pop(0)
 
