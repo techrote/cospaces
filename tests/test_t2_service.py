@@ -111,3 +111,43 @@ def test_repository_target_delegates_to_t1_resolution() -> None:
 
     assert outcome.ok
     assert workspace.calls == [("resolve", "owner/repo", "main", None)]
+
+
+def test_remote_nonzero_is_remote_failure_without_retry() -> None:
+    workspace = FakeWorkspace(WorkspaceActionResult(workspace=identity()))
+    transport = FakeTransport(
+        TransportOutcome(result=process_result(23, stdout="out", stderr="err"))
+    )
+    service = RunService(workspace=workspace, transport=transport)  # type: ignore[arg-type]
+
+    outcome = service.execute(RunRequest(argv=("false",), codespace="space-one"))
+
+    assert not outcome.ok
+    assert outcome.failure is not None
+    assert outcome.failure.code == "remote_task_failed"
+    assert int(outcome.failure.exit_status) == 5
+    assert outcome.record.exit_code == 23
+    assert outcome.record.remote_completion == "failed"
+    assert len(transport.calls) == 1
+
+
+def test_timeout_is_remote_failure_and_completion_remains_unknown() -> None:
+    workspace = FakeWorkspace(WorkspaceActionResult(workspace=identity()))
+    transport = FakeTransport(
+        TransportOutcome(
+            result=process_result(None, stdout="partial", stderr="diag", timed_out=True)
+        )
+    )
+    service = RunService(workspace=workspace, transport=transport)  # type: ignore[arg-type]
+
+    outcome = service.execute(
+        RunRequest(argv=("slow-task",), codespace="space-one", timeout_seconds=1.0)
+    )
+
+    assert not outcome.ok
+    assert outcome.failure is not None
+    assert outcome.failure.code == "remote_timeout"
+    assert int(outcome.failure.exit_status) == 5
+    assert outcome.record.timed_out is True
+    assert outcome.record.remote_completion == "unknown"
+    assert outcome.record.stdout == "partial"
