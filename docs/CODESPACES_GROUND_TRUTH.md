@@ -26,6 +26,8 @@ After selection, lifecycle operations use an explicit Codespace name.
 
 T2 encodes caller argv into one POSIX-shell command using individually quoted arguments and a fixed `set -- ...; "$@"` wrapper. The local controller still invokes `gh` with an argv array and `shell=False`; caller text is never interpreted by a local shell.
 
+T2 also passes OpenSSH `-T` and `-oBatchMode=yes` through `gh codespace ssh`. This disables pseudo-terminal allocation and password/passphrase prompting so an autonomous invocation cannot block on an SSH interaction.
+
 OpenSSH returns the remote command's exit status, but reserves status `255` for SSH errors. T2 therefore treats `255` as transport/ambiguous and does not claim that it is a trustworthy remote-program status.
 
 The captured stderr stream may contain both remote stderr and SSH/GitHub CLI transport diagnostics. T2 reports this as mixed rather than claiming perfect separation. Stdout remains the captured stdout stream.
