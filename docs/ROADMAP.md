@@ -58,6 +58,8 @@ The real disposable-Codespace smoke remains an explicit evidence sub-gate. It is
 
 Issue #22 separately tracks bounded/spooled T2 output and stronger local timeout/process-tree cleanup discovered by the audit. The current limitation is explicit and tested around truthful timeout semantics; it is not silently treated as solved.
 
+Issue #23 adds supporting repository machinery for foreign-host qualification: `tools/external_workload.py` exposes a bounded warm workload owned by this repository. It does not activate Phase 2, implement T6 `fixture`, or introduce provider-specific host access/evidence policy.
+
 Phase 2 remains deferred while the live evidence is pending unless a later explicit decision supersedes the gate.
 
 ## Phase 2 — planned tools

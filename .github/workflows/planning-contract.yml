@@ -32,6 +32,7 @@ jobs:
               'docs/CHECKPOINT_RESUME.md',
               'docs/VERIFICATION_EVIDENCE.md',
               'docs/HARDENING.md',
+              'docs/EXTERNAL_WORKLOAD.md',
               'docs/DEVELOPMENT_WORKFLOW.md',
               'docs/AUTONOMOUS_ISSUE_PROMPT.md',
               'docs/ISSUE_ATLAS.md',
