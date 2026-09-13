@@ -91,9 +91,7 @@ def test_required_failure_returns_verification_exit_category(tmp_path, capsys) -
         kind=FailureKind.VERIFICATION,
         message="required check failed",
     )
-    namespace = build_parser().parse_args(
-        ["verify", "--codespace", "space-one", "--json"]
-    )
+    namespace = build_parser().parse_args(["verify", "--codespace", "space-one", "--json"])
     service = FakeVerificationService(
         tmp_path,
         VerificationActionResult(record=record(passed=False), failure=failure),
