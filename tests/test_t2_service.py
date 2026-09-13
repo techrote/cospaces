@@ -70,3 +70,44 @@ def process_result(
         stderr=stderr,
         timed_out=timed_out,
     )
+
+
+def test_explicit_codespace_is_described_and_success_is_structured() -> None:
+    workspace = FakeWorkspace(WorkspaceActionResult(workspace=identity()))
+    transport = FakeTransport(TransportOutcome(result=process_result(0, stdout="ok\n")))
+    service = RunService(workspace=workspace, transport=transport)  # type: ignore[arg-type]
+
+    outcome = service.execute(
+        RunRequest(
+            argv=("printf", "%s", "hello"),
+            codespace="space-one",
+            timeout_seconds=8.0,
+            task_id="issue-3",
+            correlation_id="chat-1",
+        )
+    )
+
+    assert outcome.ok
+    assert workspace.calls == [("describe", "space-one")]
+    assert transport.calls == [("space-one", ("printf", "%s", "hello"), 8.0)]
+    assert UUID(outcome.record.run_id)
+    assert outcome.record.task_id == "issue-3"
+    assert outcome.record.correlation_id == "chat-1"
+    assert outcome.record.exit_code == 0
+    assert outcome.record.remote_completion == "success"
+    assert outcome.record.stdout == "ok\n"
+    assert outcome.record.stderr_mixed is True
+    assert outcome.record.duration_seconds >= 0
+
+
+def test_repository_target_delegates_to_t1_resolution() -> None:
+    workspace = FakeWorkspace(WorkspaceActionResult(workspace=identity()))
+    transport = FakeTransport(TransportOutcome(result=process_result(0)))
+    service = RunService(workspace=workspace, transport=transport)  # type: ignore[arg-type]
+
+    outcome = service.execute(
+        RunRequest(argv=("true",), repository="owner/repo", ref="main")
+    )
+
+    assert outcome.ok
+    assert workspace.calls == [("resolve", "owner/repo", "main", None)]
