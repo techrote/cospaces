@@ -42,12 +42,29 @@ python -m ruff format --check .
 python -m mypy src/cospaces
 python -m pytest
 python tools/hardening_smoke.py --json
+python tools/external_workload.py --profile smoke --json
 python -m build
 python -m cospaces --help
 cospaces --help
 ```
 
 Repository-local configuration lives at `.cospaces.toml`. `[cospaces]` currently accepts only `schema_version = 1`; T4 consumes the separate `[verify.<plan>]` sections described below. Other top-level sections remain reserved for later tools.
+
+## Portable external qualification workload
+
+`cospaces` also exposes a bounded repository-owned **warm workload** for measurement by external hosts/orchestrators. This is supporting repository machinery, not a ninth product tool and not early T6 `fixture` implementation.
+
+After cloning a pinned commit and installing `.[dev]`, the recommended representative workload is:
+
+```bash
+python tools/external_workload.py --profile core --json
+```
+
+`core` runs the Phase 1 hardening suite followed by a package build using `--no-isolation`, so the warm profile requires no package-network access after dependencies are installed. `smoke` provides a very cheap contract check; `full` runs the broader CI-like quality stack.
+
+The machine schema is `cospaces.external-workload/v1`. It records source commit, bounded platform context, repetition/stage timing, aggregate child CPU time where available, load/free-space context, output byte counts, and bounded failure diagnostics. Successful command output is not embedded. Environment variables, hostname, username, home path and Git remote URL are not serialized.
+
+External systems remain responsible for host access, cold clone/install measurement, longer scheduling, provider limits, evidence retention and interpretation. See [`docs/EXTERNAL_WORKLOAD.md`](docs/EXTERNAL_WORKLOAD.md) for the complete contract and safe repetition examples.
 
 ## T1 workspace utility
 
