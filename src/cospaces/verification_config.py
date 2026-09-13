@@ -1,5 +1,6 @@
 """Strict verification-plan parsing from repository configuration."""
 
+import math
 import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
@@ -119,8 +120,8 @@ def _check(payload: Any, index: int) -> VerificationCheck:
     if isinstance(raw_timeout, bool) or not isinstance(raw_timeout, int | float):
         raise ValueError(f"checks[{index}].timeout_seconds must be numeric")
     timeout = float(raw_timeout)
-    if timeout <= 0 or timeout > 86400:
-        raise ValueError(f"checks[{index}].timeout_seconds must be within (0, 86400]")
+    if not math.isfinite(timeout) or timeout <= 0 or timeout > 86400:
+        raise ValueError(f"checks[{index}].timeout_seconds must be finite and within (0, 86400]")
 
     required = payload.get("required", True)
     if not isinstance(required, bool):
