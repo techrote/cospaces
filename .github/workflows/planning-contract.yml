@@ -1,0 +1,44 @@
+name: planning-contract
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-planning-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate required planning documents
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          required = [
+              'README.md',
+              'docs/RAG_INDEX.md',
+              'docs/PROGRAMME.md',
+              'docs/ARCHITECTURE.md',
+              'docs/CODESPACES_GROUND_TRUTH.md',
+              'docs/TOOL_CATALOG.md',
+              'docs/ROADMAP.md',
+              'docs/EXECUTION_CONTRACT.md',
+              'docs/CHECKPOINT_RESUME.md',
+              'docs/VERIFICATION_EVIDENCE.md',
+              'docs/DEVELOPMENT_WORKFLOW.md',
+              'docs/DECISIONS.md',
+          ]
+          missing = [p for p in required if not Path(p).is_file()]
+          if missing:
+              raise SystemExit('Missing required planning documents: ' + ', '.join(missing))
+          empty = [p for p in required if not Path(p).read_text(encoding='utf-8').strip()]
+          if empty:
+              raise SystemExit('Empty required planning documents: ' + ', '.join(empty))
+          print(f'Validated {len(required)} required planning documents.')
+          PY
