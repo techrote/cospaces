@@ -29,6 +29,8 @@ jobs:
         run: python -m pytest
       - name: Phase 1 hardening suite
         run: python tools/hardening_smoke.py --json
+      - name: External workload smoke
+        run: python tools/external_workload.py --profile smoke --json
       - name: Live harness import smoke
         run: python tools/live_codespace_smoke.py --help
       - name: Build package
