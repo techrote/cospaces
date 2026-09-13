@@ -65,7 +65,7 @@ class WorkspaceService:
     ) -> tuple[CommandResult | None, DomainFailure | None]:
         try:
             result = self._github.capture(arguments)
-        except (FileNotFoundError, OSError):
+        except OSError:
             return None, DomainFailure(
                 code="github_cli_unavailable",
                 kind=FailureKind.INFRASTRUCTURE,
