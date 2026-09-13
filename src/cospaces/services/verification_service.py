@@ -135,10 +135,8 @@ class VerificationService:
         verification_id = str(uuid4())
         started_at = utc_now()
         context = self._repository_context()
-        provenance_repository = request.repository or (
-            context.repository if context is not None else None
-        )
-        provenance_ref = request.ref or (context.ref if context is not None else None)
+        provenance_repository = request.repository
+        provenance_ref = request.ref
         head = (
             context.head
             if self._head_matches_workspace(context, request.repository, request.ref)
