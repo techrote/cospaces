@@ -1,9 +1,13 @@
 from pathlib import Path
 from uuid import UUID
 
+from cospaces.domain.checkpoint import (
+    CheckpointDocument,
+    RecordReferences,
+    checkpoint_from_dict,
+)
 from cospaces.domain.run import RunRecord
 from cospaces.domain.workspace import WorkspaceIdentity
-from cospaces.services.checkpoint_service import CheckpointSaveRequest, CheckpointService
 from cospaces.services.run_service import RunActionResult
 from cospaces.services.verification_service import VerificationRequest, VerificationService
 
@@ -69,3 +73,26 @@ def test_unknown_plan_does_not_execute_remote_work(tmp_path: Path) -> None:
     assert result.failure is not None
     assert result.failure.code == "verification_plan_not_found"
     assert runner.requests == []
+
+
+def test_verification_ids_are_unique_and_fit_t3_reference_schema(tmp_path: Path) -> None:
+    write_plan(tmp_path)
+    runner = FakeRunService([success("r1"), success("r2"), success("r3"), success("r4")])
+    service = VerificationService(tmp_path, run_service=runner)  # type: ignore[arg-type]
+
+    first = service.verify(VerificationRequest(codespace="space-one", task_id="issue-5"))
+    second = service.verify(VerificationRequest(codespace="space-one", task_id="issue-5"))
+
+    assert first.record is not None
+    assert second.record is not None
+    verification_id = first.record.verification_id
+    assert verification_id != second.record.verification_id
+    assert UUID(verification_id)
+    checkpoint = CheckpointDocument(
+        task_id="issue-5",
+        created_at="2026-09-13T20:00:00Z",
+        updated_at="2026-09-13T20:00:01Z",
+        records=RecordReferences(last_verification_id=verification_id),
+    )
+    parsed = checkpoint_from_dict(checkpoint.to_dict())
+    assert parsed.records.last_verification_id == verification_id
