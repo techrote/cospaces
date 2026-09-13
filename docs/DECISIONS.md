@@ -89,3 +89,21 @@ This file records load-bearing programme decisions. New decisions should append 
 **Rationale:** An autonomous task must fail visibly on unresolved creation choices rather than block on, or silently resolve through, an interactive selector. `--default-permissions` avoids an authorization prompt without granting requested additional permissions.
 
 **Status:** active.
+
+## D014 — T2 uses argv-preserving POSIX remote encoding over Codespaces SSH
+
+**Decision:** T2 sends caller argv through `gh codespace ssh` as one POSIX-shell command built from individually quoted arguments and the fixed wrapper `set -- ...; "$@"`. Local controller execution always remains argv-based with `shell=False`.
+
+**Rationale:** SSH remote execution necessarily crosses a remote shell command boundary; the fixed wrapper preserves argument tokenisation without allowing caller strings to become controller-shell syntax.
+
+**Limitations:** SSH status 255 is transport/ambiguous, stderr may mix remote and transport diagnostics, and controller timeout does not prove remote termination.
+
+**Status:** active.
+
+## D015 — T2 refuses GitHub CLI versions affected by the Codespaces SSH advisory
+
+**Decision:** T2 requires GitHub CLI 2.62.0 or newer before live Codespaces SSH execution.
+
+**Rationale:** GitHub's GHSA-p2h2-3vg9-4p87 advisory identifies versions through 2.61.0 as affected by a local command-execution vulnerability in Codespaces SSH/log handling.
+
+**Status:** active.
