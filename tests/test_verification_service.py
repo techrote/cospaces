@@ -133,8 +133,7 @@ def test_checks_run_sequentially_and_lock_first_workspace(tmp_path: Path) -> Non
     assert runner.requests[0].codespace is None
     assert runner.requests[1].codespace == "space-one"
     assert all(
-        request.correlation_id == result.record.verification_id
-        for request in runner.requests
+        request.correlation_id == result.record.verification_id for request in runner.requests
     )
     assert UUID(result.record.verification_id)
     assert result.record.repository == "owner/repo"
@@ -151,9 +150,7 @@ def test_required_failure_sets_verification_exit_and_continues(tmp_path: Path) -
         kind=FailureKind.REMOTE,
         message="remote failed",
     )
-    runner = FakeRunService(
-        [outcome("run-1", exit_code=23, failure=failure), outcome("run-2")]
-    )
+    runner = FakeRunService([outcome("run-1", exit_code=23, failure=failure), outcome("run-2")])
     service = VerificationService(tmp_path, run_service=runner)  # type: ignore[arg-type]
 
     result = service.verify(VerificationRequest(codespace="space-one"))
@@ -176,9 +173,7 @@ def test_optional_failure_remains_visible_but_aggregate_passes(tmp_path: Path) -
         kind=FailureKind.REMOTE,
         message="optional failed",
     )
-    runner = FakeRunService(
-        [outcome("run-1", exit_code=9, failure=failure), outcome("run-2")]
-    )
+    runner = FakeRunService([outcome("run-1", exit_code=9, failure=failure), outcome("run-2")])
     service = VerificationService(tmp_path, run_service=runner)  # type: ignore[arg-type]
 
     result = service.verify(VerificationRequest(codespace="space-one"))
@@ -220,9 +215,7 @@ def test_infrastructure_failure_aborts_without_becoming_check_assertion(tmp_path
         kind=FailureKind.INFRASTRUCTURE,
         message="transport unavailable",
     )
-    runner = FakeRunService(
-        [outcome("run-1", exit_code=255, failure=failure), outcome("run-2")]
-    )
+    runner = FakeRunService([outcome("run-1", exit_code=255, failure=failure), outcome("run-2")])
     service = VerificationService(tmp_path, run_service=runner)  # type: ignore[arg-type]
 
     result = service.verify(VerificationRequest(codespace="space-one"))
