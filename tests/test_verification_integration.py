@@ -70,8 +70,8 @@ def success(run_id: str) -> RunActionResult:
 def write_plan(root: Path) -> None:
     (root / ".cospaces.toml").write_text(
         "[verify.default]\n"
-        "[[verify.default.checks]]\nname = \"one\"\ncommand = [\"example-one\"]\n"
-        "[[verify.default.checks]]\nname = \"two\"\ncommand = [\"example-two\"]\n",
+        '[[verify.default.checks]]\nname = "one"\ncommand = ["example-one"]\n'
+        '[[verify.default.checks]]\nname = "two"\ncommand = ["example-two"]\n',
         encoding="utf-8",
     )
 
