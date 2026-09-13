@@ -1,7 +1,7 @@
 """Process adapter primitives."""
 
-from dataclasses import dataclass
 import subprocess
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
