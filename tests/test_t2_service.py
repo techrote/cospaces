@@ -1,7 +1,6 @@
 from uuid import UUID
 
 from cospaces.adapters.process import CommandResult
-from cospaces.domain.contracts import DomainFailure, FailureKind
 from cospaces.domain.run import RunRequest
 from cospaces.domain.workspace import WorkspaceIdentity
 from cospaces.services.run_service import RunService
