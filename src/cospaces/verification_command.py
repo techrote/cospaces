@@ -16,13 +16,12 @@ def build_check_argv(check: VerificationCheck) -> tuple[str, ...]:
     if check.environment:
         assignments = tuple(f"{key}={value}" for key, value in check.environment)
         command = ("env", *assignments, *command)
-    if check.working_directory is None:
-        return command
+    working_directory = check.working_directory or "."
     return (
         "sh",
         "-c",
         _VERIFY_CWD_SCRIPT,
         "cospaces-verify",
-        check.working_directory,
+        working_directory,
         *command,
     )
