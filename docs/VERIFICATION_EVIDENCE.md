@@ -8,59 +8,96 @@ Verification answers a narrow question: **did the repository-declared checks req
 
 It does not replace code review or product judgement.
 
-A verification plan should be repository-controlled, explicit, bounded, and machine-readable. Commands should be arrays where possible rather than shell strings.
+A verification plan is repository-controlled, explicit, bounded, and machine-readable. Commands are argv arrays rather than shell strings.
 
-## Verification plan requirements
+## T4 verification plans
 
-Each check should support at least:
-- unique name within the plan;
+T4 reads named plans from `.cospaces.toml`:
+
+```toml
+[verify.default]
+
+[[verify.default.checks]]
+name = "tests"
+command = ["python", "-m", "pytest", "-q"]
+timeout_seconds = 600
+required = true
+working_directory = "."
+environment = { MODE = "ci" }
+```
+
+Each check supports:
+- unique bounded name within the plan;
 - command argv;
-- timeout;
-- required/optional flag;
-- optional working directory relative to repository root;
-- optional safe environment overrides declared in config;
-- expected successful exit code, initially `0` unless explicitly extended.
+- timeout, default 600 seconds;
+- required/optional flag, default required;
+- optional repository-relative working directory;
+- optional explicit string environment overrides.
 
-MVP should execute sequentially unless implementation evidence shows a simpler safe parallel design. Sequential execution gives deterministic logs and avoids accidental resource contention.
+Unknown/misspelled keys, duplicate names, invalid timeout/types, empty executable, or unsafe working directory make the plan invalid before any remote command runs.
+
+T4 executes checks sequentially. This gives deterministic order and avoids implicit resource contention. All checks run through T2 `RunService`; T4 contains no second Codespaces/SSH transport.
+
+The first T2 run may resolve the workspace from repository/ref. Once resolved, later checks target that exact Codespace name so one verification cannot silently hop between workspaces.
 
 ## Aggregate status
 
 - all required checks pass => verification passes;
-- any required check fails/times out/cannot run => verification fails;
-- optional failure is recorded prominently but does not make the aggregate required result fail;
-- malformed verification configuration is a configuration failure, not a failed check;
-- inability to reach/run in the workspace is an infrastructure failure, not a check assertion failure.
+- any required check has a remote non-zero result or timeout => verification fails with category `7` after later declared checks are still collected;
+- optional remote failure/timeout is recorded prominently but does not fail the required aggregate;
+- malformed verification configuration is a usage/configuration failure and performs no remote work;
+- inability to select/reach/run in the workspace is a lower-layer selection/infrastructure failure, not a failed check assertion;
+- a non-remote T2 failure aborts the sequence and marks the verification record incomplete.
 
-## Verification record
+Only failures that T2 classifies as `remote` become check outcomes. This preserves the distinction between “the test failed” and “the test could not be run.”
 
-Target semantic fields:
+## Verification record v1
+
+T4 emits schema `cospaces.verify/v1` inside the normal `cospaces.result/v1` envelope.
+
+Semantic fields:
 
 ```json
 {
   "schema": "cospaces.verify/v1",
-  "verification_id": "...",
+  "verification_id": "uuid",
   "plan": "default",
+  "task_id": "issue-42",
+  "correlation_id": "agent-pass-3",
   "repository": "owner/repo",
-  "ref": "...",
-  "head": "...",
+  "ref": "main",
+  "head": "git-sha-or-null",
   "workspace": {},
   "started_at": "...",
   "finished_at": "...",
+  "complete": true,
   "passed": true,
   "checks": [
     {
       "name": "tests",
       "required": true,
       "passed": true,
+      "timed_out": false,
       "run_id": "...",
       "exit_code": 0,
-      "duration_ms": 1234
+      "remote_completion": "success",
+      "duration_ms": 1234,
+      "failure_code": null,
+      "command": ["python", "-m", "pytest", "-q"],
+      "working_directory": ".",
+      "environment_keys": ["MODE"]
     }
   ]
 }
 ```
 
-Large stdout/stderr may be referenced from files rather than embedded forever; MVP may initially embed bounded output if that keeps implementation simple.
+Every invocation gets a unique `verification_id`. That ID is also the T2 correlation ID for constituent runs; caller task/correlation metadata remains separately visible at verification level.
+
+Per-check stdout/stderr is not duplicated into the aggregate record. The T2 `run_id` is the evidence reference, accompanied by bounded exit/timeout/completion/duration/failure metadata. Configured environment **values** are not copied into the aggregate; only keys are listed.
+
+Repository/ref/HEAD/workspace provenance is included where established. Unknown values remain null rather than inferred.
+
+For v0.1 the JSON result written to stdout is the authoritative verification report. Automatic report-file persistence is intentionally deferred; T3 can durably reference the `verification_id` in `records.last_verification_id`.
 
 ## T6 fixture semantics
 

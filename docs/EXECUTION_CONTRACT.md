@@ -52,7 +52,7 @@ Target shape:
 }
 ```
 
-On controller/infrastructure failure the envelope has `ok: false` and an error object. Operations such as T2 may still include a partial/failed `result` record when that record is diagnostically meaningful.
+On controller/infrastructure failure the envelope has `ok: false` and an error object. Operations such as T2 and T4 may still include a partial/failed `result` record when that record is diagnostically meaningful.
 
 The user-facing message may evolve; error `code` values should be treated as compatibility-sensitive once tests use them.
 
@@ -73,7 +73,7 @@ Minimum machine representation should include available values for:
 
 Do not fabricate fields that GitHub cannot establish. Unknown information should be absent/null rather than guessed.
 
-## T1 `workspace` candidate surface
+## T1 `workspace`
 
 ```text
 cospaces workspace list --repo owner/repo --json
@@ -85,7 +85,7 @@ cospaces workspace stop --codespace NAME --json
 
 Later explicit operations may add rebuild/delete, but neither should occur implicitly.
 
-Selection precedence for `ensure` should prefer explicit codespace name when supplied, otherwise filter by repository/ref/task metadata according to documented policy. More than one equally valid candidate is an ambiguity error, not permission to choose randomly.
+Selection precedence for `ensure` prefers explicit Codespace name when supplied, otherwise filters by repository/ref according to documented policy. More than one equally valid candidate is an ambiguity error, not permission to choose randomly.
 
 ## T2 `run`
 
@@ -134,7 +134,7 @@ T2 performs no implicit retry. Every invocation gets a unique run ID; caller tas
 
 T2 does not inspect or serialize controller credential stores or environment variables. It does capture caller-selected task argv/stdout/stderr by design. A caller that executes a secret-printing task can therefore place that task-controlled data in the run record; such commands should not be used when the record will be persisted or shared.
 
-## T3 `checkpoint` candidate surface
+## T3 `checkpoint`
 
 ```text
 cospaces checkpoint save --task TASK-ID [fields/options] --json
@@ -149,20 +149,25 @@ Target storage location:
 .cospaces/checkpoints/<task-id>.json
 ```
 
-History may live under a sibling directory or bounded history array; exact mechanism belongs to implementation, but accidental truncation/corruption must be detectable.
+Exact checkpoint data and bounded prior-revision semantics are defined in `docs/CHECKPOINT_RESUME.md`.
 
-Checkpoint data is defined in `docs/CHECKPOINT_RESUME.md`.
-
-## T4 `verify` candidate surface
+## T4 `verify`
 
 ```text
 cospaces verify [PLAN] --codespace NAME --json
-cospaces verify --repo owner/repo --json
+cospaces verify [PLAN] --repo owner/repo [--ref BRANCH] --json
 ```
 
-Repository configuration should support named checks similar to:
+The default plan name is `default`. Verification requires an explicit Codespace or repository target. It reads `.cospaces.toml` from `--root` (default current directory), validates the complete plan before remote execution, and executes checks sequentially through the T2 `RunService`. T4 does not implement another SSH/GitHub transport.
+
+### Verification configuration
+
+Named plans use this schema:
 
 ```toml
+[cospaces]
+schema_version = 1
+
 [verify.default]
 
 [[verify.default.checks]]
@@ -170,27 +175,94 @@ name = "tests"
 command = ["python", "-m", "pytest", "-q"]
 timeout_seconds = 600
 required = true
+working_directory = "."
+environment = { MODE = "ci" }
 
 [[verify.default.checks]]
-name = "lint"
-command = ["ruff", "check", "."]
-timeout_seconds = 120
-required = true
+name = "advisory"
+command = ["python", "-V"]
+required = false
 ```
 
-Exact TOML syntax may be adjusted for a cleaner parser, but commands should prefer arrays over shell strings.
+Rules:
+- a plan contains 1–64 checks;
+- check names are unique and use the same bounded identifier grammar as plan names;
+- `command` is a non-empty argv array, not a shell string;
+- the executable (`command[0]`) must be non-empty; later argv items may be empty strings;
+- timeout defaults to 600 seconds and must be within `(0, 86400]`;
+- `required` defaults to true;
+- `working_directory` is optional, POSIX, repository-relative, bounded, and cannot contain `..` or be absolute;
+- `environment` is optional and contains at most 64 explicit POSIX variable-name/string-value pairs;
+- unknown plan/check keys are configuration errors rather than being silently ignored;
+- duplicate check names are configuration errors.
 
-Verification result should contain each check's run result or reference, required/optional status, duration, and aggregate pass/fail.
+Checks execute from the Codespace repository checkout root by default. A configured working directory is resolved beneath that root by a fixed wrapper; the configured directory and command remain positional argv data rather than being interpolated into controller shell text.
+
+### Verification record
+
+Schema `cospaces.verify/v1`:
+
+```json
+{
+  "schema": "cospaces.verify/v1",
+  "verification_id": "uuid",
+  "plan": "default",
+  "task_id": "issue-42",
+  "correlation_id": "agent-pass-3",
+  "repository": "owner/repo",
+  "ref": "main",
+  "head": "git-sha-or-null",
+  "workspace": {"name": "codespace-name"},
+  "started_at": "...",
+  "finished_at": "...",
+  "complete": true,
+  "passed": true,
+  "checks": [
+    {
+      "name": "tests",
+      "required": true,
+      "passed": true,
+      "timed_out": false,
+      "run_id": "uuid",
+      "exit_code": 0,
+      "remote_completion": "success",
+      "duration_ms": 1234,
+      "failure_code": null,
+      "command": ["python", "-m", "pytest", "-q"],
+      "working_directory": ".",
+      "environment_keys": ["MODE"]
+    }
+  ]
+}
+```
+
+Environment **values** are not copied into verification records. Per-check stdout/stderr is owned by the underlying T2 run record; the T4 aggregate keeps its `run_id` and bounded outcome summary rather than duplicating logs.
+
+Every verification receives a unique `verification_id`. That ID is used as the T2 correlation ID for each check; caller `task_id` remains separate. After the first check resolves a repository-selected workspace, subsequent checks target that exact Codespace name.
+
+### Aggregate and failure semantics
+
+- every required check succeeds => `complete=true`, `passed=true`, controller exit `0`;
+- required remote non-zero or timeout => check remains visible, later checks continue, aggregate `passed=false`, final `verification_failed`, exit category `7`;
+- optional remote non-zero or timeout => check remains visible but does not fail the required aggregate;
+- malformed configuration/unknown plan => no remote work, exit category `2`;
+- T1 selection/not-found/ambiguity => preserve exit category `4`;
+- T2 dependency/auth/transport/control-plane failure => stop the sequence, `complete=false`, preserve exit category `3` (or the lower-layer category actually returned);
+- only T2 failures classified as `remote` are treated as check outcomes; other domain failures are not relabelled as assertion failures.
+
+Repository/ref/HEAD provenance is taken from explicit target fields and safe local repository context when they agree. Unknown provenance remains null rather than guessed.
+
+For v0.1 the JSON result on stdout is authoritative; T4 does not automatically create a persistent report file. T3 may reference the `verification_id` in `records.last_verification_id`.
 
 ## Configuration
 
-Planned repository file:
+Repository file:
 
 ```text
 .cospaces.toml
 ```
 
-MVP should keep the schema intentionally small. Unknown keys should either be rejected with a useful error or preserved/ignored according to an explicitly tested forward-compatibility policy; do not silently misspell important settings.
+`[cospaces]` currently accepts only `schema_version = 1`; unknown keys in that control table are rejected. T4 claims the `[verify]` top-level section and validates its selected plan strictly. Other top-level sections remain uninterpreted/reserved for later tools.
 
 ## Exit-code policy
 
@@ -198,7 +270,7 @@ MVP should keep the schema intentionally small. Unknown keys should either be re
 - `2`: invocation/configuration error;
 - `3`: dependency/auth/control-plane/transport unavailable;
 - `4`: selection/not-found/ambiguity error;
-- `5`: remote command completed unsuccessfully or timed out;
+- `5`: standalone T2 remote command completed unsuccessfully or timed out;
 - `6`: checkpoint/persistence error;
 - `7`: required verification failed;
 - `1`: unexpected internal failure.
@@ -207,8 +279,8 @@ The mapping is compatibility-sensitive and covered by tests.
 
 ## Correlation
 
-Every remote run and verification should have a generated ID. If the caller supplies a task ID/correlation ID, preserve it separately rather than replacing the unique run ID.
+Every remote run and verification has a generated ID. If the caller supplies a task ID/correlation ID, preserve it separately rather than replacing the unique operation ID. T4 uses its `verification_id` as the correlation ID of constituent T2 runs so they can be grouped mechanically.
 
 ## Logging
 
-Human logs may be verbose with an explicit flag. Machine JSON must stay parseable. Avoid collecting sensitive controller environment/configuration in the first place.
+Human logs may be verbose with an explicit flag. Machine JSON must stay parseable. Avoid collecting sensitive controller environment/configuration in the first place. Verification environment values are repository-controlled executable inputs and are intentionally omitted from aggregate verification records.

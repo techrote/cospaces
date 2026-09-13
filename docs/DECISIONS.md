@@ -123,3 +123,19 @@ This file records load-bearing programme decisions. New decisions should append 
 **Rationale:** Continuation metadata must reveal whether uncommitted work existed without becoming a secret-bearing log or being mistaken for durable source-control publication.
 
 **Status:** active.
+
+## D018 — T4 composes T2 sequentially and pins one workspace
+
+**Decision:** T4 verification checks execute in declared order through the existing T2 `RunService`. Repository-based selection may resolve the first check's Codespace; every subsequent check in that verification targets the same resolved Codespace name. T4 implements no independent Codespaces/SSH transport.
+
+**Rationale:** Sequential composition preserves deterministic order, lower-layer failure categories, and T2 transport safety while preventing one verification from silently hopping between workspaces.
+
+**Status:** active.
+
+## D019 — T4 records references and bounded outcomes, not duplicated logs or secret values
+
+**Decision:** `cospaces.verify/v1` records each check's T2 `run_id`, exit/timeout/completion/duration/failure metadata, declared argv, working directory, and environment variable **keys**. It does not duplicate T2 stdout/stderr or configured environment values. For v0.1 the stdout JSON result is authoritative; automatic persistent report files are deferred.
+
+**Rationale:** The aggregate must be sufficient for an agent to decide required pass/fail and trace evidence without multiplying potentially sensitive/unbounded output. T3 already provides a durable `last_verification_id` reference.
+
+**Status:** active.

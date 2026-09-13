@@ -36,6 +36,16 @@ A controller timeout terminates the local `gh codespace ssh` invocation, but tha
 
 GitHub published a Codespaces SSH/logs local command-execution vulnerability affecting GitHub CLI versions through 2.61.0, fixed in 2.62.0. T2 refuses live SSH execution when it can establish that `gh` is older than 2.62.0.
 
+## T4 repository-relative verification facts
+
+GitHub Codespaces exposes `GITHUB_REPOSITORY` as a default environment variable in `owner/repository` form. GitHub's Codespaces/CLI documentation also uses `/workspaces/REPOSITORY-NAME` as the repository checkout path.
+
+T4 uses those documented conventions only to establish the checkout root for repository-relative verification working directories. It derives the repository-name component from `GITHUB_REPOSITORY`, requires `/workspaces/<repository-name>` to exist, then changes directory beneath that root before executing the configured argv.
+
+The wrapper text is fixed by `cospaces`. The configured relative directory, environment assignments, and command arguments are passed as positional argv data rather than interpolated into controller shell text. Configuration validation rejects absolute working directories, `..` path components, backslash separators, and NULs.
+
+This does not imply that arbitrary paths outside the repository checkout are valid verification working directories in v0.1.
+
 ## Lifecycle facts
 
 Codespaces preserve saved workspace state across stop/reconnect, while running processes stop when the Codespace stops. Current documented defaults commonly include a 30-minute idle timeout and a 30-day inactive retention period, subject to user or organisation policy. Changes under `/workspaces` survive devcontainer rebuilds; data outside the preserved area may not. Deleting a Codespace deletes unpushed/unexternalised workspace data.
@@ -60,5 +70,7 @@ GitHub Codespaces prebuilds can prepare devcontainer dependencies and configurat
 - https://man.openbsd.org/ssh
 - https://docs.github.com/en/codespaces/about-codespaces/understanding-the-codespace-lifecycle
 - https://docs.github.com/en/codespaces/prebuilding-your-codespaces/configuring-prebuilds
+- https://docs.github.com/en/codespaces/developing-in-a-codespace/default-environment-variables-for-your-codespace
+- https://docs.github.com/en/codespaces/developing-in-a-codespace/using-github-codespaces-with-github-cli
 
 Implementation agents should verify material CLI behaviour against current official documentation when an issue depends on a flag or lifecycle behaviour not covered by tests.
