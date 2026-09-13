@@ -36,7 +36,7 @@ class WorkspaceAtState:
         )
 
 
-def test_checkpoint_survives_controller_reconstruction_without_executing_next(tmp_path: Path) -> None:
+def test_checkpoint_reconstructs_without_executing_next(tmp_path: Path) -> None:
     initial = CheckpointService(
         tmp_path,
         probe=StableProbe(),  # type: ignore[arg-type]
