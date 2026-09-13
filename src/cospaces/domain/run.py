@@ -31,3 +31,22 @@ class RunRecord:
     duration_seconds: float
     started_at: str
     finished_at: str
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "run_id": self.run_id,
+            "command": list(self.argv),
+            "task_id": self.task_id,
+            "correlation_id": self.correlation_id,
+            "timeout_seconds": self.timeout_seconds,
+            "exit_code": self.exit_code,
+            "timed_out": self.timed_out,
+            "remote_completion": self.remote_completion,
+            "transport": self.transport,
+            "stdout": self.stdout,
+            "stderr": self.stderr,
+            "stderr_mixed": self.stderr_mixed,
+            "duration_seconds": self.duration_seconds,
+            "started_at": self.started_at,
+            "finished_at": self.finished_at,
+        }
