@@ -19,9 +19,7 @@ def emit_verification_result(
         started_at=record.started_at if record is not None else now,
         finished_at=record.finished_at if record is not None else now,
         workspace=(
-            dict(record.workspace)
-            if record is not None and record.workspace is not None
-            else None
+            dict(record.workspace) if record is not None and record.workspace is not None else None
         ),
         result=record.to_dict() if record is not None else None,
         error=result.failure,
