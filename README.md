@@ -24,4 +24,28 @@ The programme deliberately starts small: define eight composable utilities, impl
 
 Agents and contributors should read [`docs/RAG_INDEX.md`](docs/RAG_INDEX.md) first. It defines document authority, retrieval rules, the roadmap, and the autonomous issue execution protocol.
 
-The repository is currently in its planning/bootstrap phase. GitHub issues are intended to be executable prompts: an implementation agent should be able to open an issue, retrieve the referenced canonical documents, implement the work, verify it, open a PR, wait for required automated checks, merge the PR when green, and reconcile the issue without needing another planning conversation.
+Implementation issues are intended to be executable prompts: an implementation agent should be able to open an issue, retrieve the referenced canonical documents, implement the work, verify it, open a PR, inspect required automated checks, merge the PR when green, and reconcile the issue without another planning conversation.
+
+## Phase 0 development
+
+The controller package targets Python 3.11+ and currently has no runtime dependencies. Create a development environment and install the pinned development tools with:
+
+```bash
+python -m pip install -e ".[dev]"
+```
+
+Run the same checks used by CI:
+
+```bash
+python -m ruff check .
+python -m ruff format --check .
+python -m mypy src/cospaces
+python -m pytest
+python -m build
+python -m cospaces --help
+cospaces --help
+```
+
+The eight tool names are registered during Phase 0 only to prove routing. Until their implementation issues land, invoking one returns a structured `not_implemented` result in `--json` mode and does not perform Codespaces operations.
+
+Repository-local configuration begins at `.cospaces.toml`. Phase 0 recognises only `cospaces.schema_version = 1`; unknown keys inside `[cospaces]` are rejected, while other top-level sections are retained as uninterpreted forward-compatible data for later tool issues.
