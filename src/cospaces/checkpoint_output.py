@@ -70,10 +70,11 @@ def emit_checkpoint_result(
         if result.document is not None:
             print(json.dumps(result.document.to_dict(), indent=2, sort_keys=True))
         for mismatch in result.mismatches:
-            print(
-                f"mismatch: {mismatch.field}: expected={mismatch.expected!r} actual={mismatch.actual!r}",
-                file=sys.stderr,
+            message = (
+                f"mismatch: {mismatch.field}: expected={mismatch.expected!r} "
+                f"actual={mismatch.actual!r}"
             )
+            print(message, file=sys.stderr)
         if result.failure is not None:
             print(result.failure.message, file=sys.stderr)
     if result.failure is not None:
