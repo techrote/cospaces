@@ -13,8 +13,9 @@ When instructions conflict, use this order unless a newer decision explicitly su
 5. `docs/DEVELOPMENT_WORKFLOW.md`, for implementation, verification, PR, merge, and reconciliation procedure.
 6. `docs/TOOL_CATALOG.md`, for tool responsibilities and non-goals.
 7. `docs/ROADMAP.md`, for sequencing and dependency intent.
-8. `docs/ISSUE_ATLAS.md`, for issue-number navigation only.
-9. `README.md`, for orientation only.
+8. `docs/HARDENING.md`, for current Phase 1 hardening evidence/status.
+9. `docs/ISSUE_ATLAS.md`, for issue-number navigation only.
+10. `README.md`, for orientation only.
 
 If ambiguity remains and safe progress is possible, choose the smallest reversible implementation consistent with the higher-authority documents and record the decision in the PR. Do not broaden scope merely because adjacent functionality is attractive.
 
@@ -43,6 +44,9 @@ Also read `docs/CHECKPOINT_RESUME.md`.
 ### Verification, fixture, evidence, or matrix work
 Also read `docs/VERIFICATION_EVIDENCE.md`.
 
+### Phase 1 hardening or Phase 2 activation work
+Also read `docs/HARDENING.md`. Do not infer that the live Codespace sub-gate passed merely because network-free CI is green.
+
 ## Programme vocabulary
 
 - **controller**: the local/client-side `cospaces` process invoking GitHub CLI and coordinating operations.
@@ -57,7 +61,7 @@ Also read `docs/VERIFICATION_EVIDENCE.md`.
 
 ## Eight-tool programme
 
-### MVP tranche — implement first
+### MVP tranche — implemented
 1. `workspace`
 2. `run`
 3. `checkpoint`
@@ -65,13 +69,13 @@ Also read `docs/VERIFICATION_EVIDENCE.md`.
 
 These four prove the complete minimum loop: acquire a prepared environment, execute work, survive interruption, and determine whether the result is acceptable.
 
-### Second tranche — planned, not required for v0.1
+### Second tranche — planned and deferred
 5. `capabilities`
 6. `fixture`
 7. `evidence`
 8. `matrix`
 
-These add richer environment truth, experiment reproducibility, evidence packaging, and comparative execution after the basic loop is reliable.
+These add richer environment truth, experiment reproducibility, evidence packaging, and comparative execution after the basic loop is reliable. Activation remains subject to the Phase 1 hardening gate recorded in `docs/HARDENING.md`.
 
 ## Agent operating rule
 
