@@ -72,9 +72,7 @@ class RunService:
 
     @staticmethod
     def _target_failure(code: str, message: str, kind: FailureKind) -> WorkspaceActionResult:
-        return WorkspaceActionResult(
-            failure=DomainFailure(code=code, kind=kind, message=message)
-        )
+        return WorkspaceActionResult(failure=DomainFailure(code=code, kind=kind, message=message))
 
     def _resolve_target(self, request: RunRequest) -> WorkspaceActionResult:
         if request.codespace is not None:
