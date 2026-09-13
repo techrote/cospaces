@@ -53,7 +53,7 @@ def main() -> int:
 
     run = RunService().execute(
         RunRequest(
-            argv=("git", "status", "--short"),
+            argv=("git", "--version"),
             codespace=args.codespace,
             task_id=task_id,
             correlation_id="live-smoke",

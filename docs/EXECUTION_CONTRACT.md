@@ -85,7 +85,9 @@ cospaces workspace stop --codespace NAME --json
 
 Later explicit operations may add rebuild/delete, but neither should occur implicitly.
 
-Selection precedence for `ensure` prefers explicit Codespace name when supplied, otherwise filters by repository/ref according to documented policy. More than one equally valid candidate is an ambiguity error, not permission to choose randomly.
+Selection precedence for `ensure` prefers explicit Codespace name when supplied, otherwise filters by repository/ref according to documented policy. More than one equally valid candidate is an ambiguity error, not permission to choose randomly. When a ref is requested, incomplete candidate ref metadata is also a selection failure if it prevents proving that exactly one candidate matches; a known match is not selected while another candidate could still match but has an unknown ref.
+
+T1 GitHub Codespaces control-plane calls are bounded by a controller timeout. Expiry is reported as retryable infrastructure failure (`codespaces_control_plane_timeout`, exit category `3`) rather than waiting indefinitely. This bound is a controller safeguard, not evidence that GitHub cancelled an operation server-side.
 
 ## T2 `run`
 
@@ -130,9 +132,15 @@ Failure categories include:
 - remote non-zero completion or timeout: exit category 5;
 - remote success: exit 0.
 
+T2 validates the timeout and argv before workspace lookup. Direct API callers therefore cannot use non-finite/non-positive timeouts or NUL-bearing argv to trigger controller/transport work before an eventual usage failure.
+
 T2 performs no implicit retry. Every invocation gets a unique run ID; caller task/correlation IDs are preserved separately.
 
 T2 does not inspect or serialize controller credential stores or environment variables. It does capture caller-selected task argv/stdout/stderr by design. A caller that executes a secret-printing task can therefore place that task-controlled data in the run record; such commands should not be used when the record will be persisted or shared.
+
+### T2 v0.1 resource limitation
+
+The current process adapter captures stdout/stderr through `subprocess.run`. Output volume is therefore not bounded at the adapter layer, and a controller timeout cannot prove descendant/remote process termination. Remote completion remains `unknown` on timeout for this reason. A future process-adapter hardening change should bound/spool output and improve local process-tree cleanup without pretending it can prove remote termination.
 
 ## T3 `checkpoint`
 
@@ -189,14 +197,16 @@ Rules:
 - check names are unique and use the same bounded identifier grammar as plan names;
 - `command` is a non-empty argv array, not a shell string;
 - the executable (`command[0]`) must be non-empty; later argv items may be empty strings;
-- timeout defaults to 600 seconds and must be within `(0, 86400]`;
+- timeout defaults to 600 seconds and must be finite and within `(0, 86400]`;
 - `required` defaults to true;
 - `working_directory` is optional, POSIX, repository-relative, bounded, and cannot contain `..` or be absolute;
 - `environment` is optional and contains at most 64 explicit POSIX variable-name/string-value pairs;
 - unknown plan/check keys are configuration errors rather than being silently ignored;
 - duplicate check names are configuration errors.
 
-Checks execute from the Codespace repository checkout root by default. A configured working directory is resolved beneath that root by a fixed wrapper; the configured directory and command remain positional argv data rather than being interpolated into controller shell text.
+Checks execute from the Codespace repository checkout root by default. A configured working directory is first resolved to its physical path (`pwd -P`) beneath the physical repository root, so a repository symlink cannot escape the checkout. The configured directory and command remain positional argv data rather than being interpolated into controller shell text.
+
+Failure to establish the repository root, enter the requested directory, or prove physical containment is `verification_environment_error`: an infrastructure failure with an incomplete verification record, not a repository check assertion failure.
 
 ### Verification record
 
@@ -211,7 +221,7 @@ Schema `cospaces.verify/v1`:
   "correlation_id": "agent-pass-3",
   "repository": "owner/repo",
   "ref": "main",
-  "head": "git-sha-or-null",
+  "head": null,
   "workspace": {"name": "codespace-name"},
   "started_at": "...",
   "finished_at": "...",
@@ -248,9 +258,10 @@ Every verification receives a unique `verification_id`. That ID is used as the T
 - malformed configuration/unknown plan => no remote work, exit category `2`;
 - T1 selection/not-found/ambiguity => preserve exit category `4`;
 - T2 dependency/auth/transport/control-plane failure => stop the sequence, `complete=false`, preserve exit category `3` (or the lower-layer category actually returned);
-- only T2 failures classified as `remote` are treated as check outcomes; other domain failures are not relabelled as assertion failures.
+- T4 repository-root/working-directory setup or containment failure => stop the sequence, `complete=false`, exit category `3`;
+- only genuine T2 remote-task failures are treated as check outcomes; controller/environment failures are not relabelled as assertion failures.
 
-Repository/ref/HEAD provenance is taken from explicit target fields and safe local repository context when they agree. Unknown provenance remains null rather than guessed.
+Repository/ref provenance is taken from the resolved workspace when available. **T4 v1 does not currently observe the remote Git commit SHA**, so `head` is null. The controller checkout HEAD must never be copied into a remote verification record merely because repository/ref strings happen to match. Unknown provenance remains null rather than guessed.
 
 For v0.1 the JSON result on stdout is authoritative; T4 does not automatically create a persistent report file. T3 may reference the `verification_id` in `records.last_verification_id`.
 
@@ -268,7 +279,7 @@ Repository file:
 
 - `0`: operation succeeded / verification passed;
 - `2`: invocation/configuration error;
-- `3`: dependency/auth/control-plane/transport unavailable;
+- `3`: dependency/auth/control-plane/transport/environment unavailable;
 - `4`: selection/not-found/ambiguity error;
 - `5`: standalone T2 remote command completed unsuccessfully or timed out;
 - `6`: checkpoint/persistence error;

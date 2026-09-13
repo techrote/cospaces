@@ -13,6 +13,20 @@ MAX_PROGRESS_CHARS = 1000
 MAX_ITEM_CHARS = 500
 MAX_ITEMS = 100
 _WORKSPACE_KEYS = {"name", "repository", "ref", "state", "display_name", "machine"}
+_ROOT_KEYS = {
+    "schema",
+    "task_id",
+    "created_at",
+    "updated_at",
+    "repository",
+    "ref",
+    "head",
+    "workspace",
+    "working_tree",
+    "progress",
+    "records",
+    "notes",
+}
 
 
 def validate_task_id(value: str) -> str:
@@ -149,6 +163,10 @@ def _workspace(value: Any) -> Mapping[str, object] | None:
 
 
 def checkpoint_from_dict(payload: Mapping[str, Any]) -> CheckpointDocument:
+    unknown_root = set(payload) - _ROOT_KEYS
+    if unknown_root:
+        raise ValueError(f"checkpoint contains unsupported keys: {sorted(unknown_root)}")
+
     schema = payload.get("schema")
     if schema != SCHEMA:
         raise ValueError(f"unsupported checkpoint schema: {schema!r}")

@@ -8,7 +8,7 @@ The programme deliberately starts small: define eight composable utilities, impl
 
 ## Initial implementation tranche
 
-1. **workspace** — select/create/start/stop and describe the task Codespace.
+1. **workspace** — select/create/reuse/stop and describe the task Codespace.
 2. **run** — execute non-interactive commands remotely and return structured results.
 3. **checkpoint** — persist resumable task state independent of a live process or chat context.
 4. **verify** — execute repository-declared checks and emit structured verification results.
@@ -62,7 +62,9 @@ cospaces workspace create --repo owner/repo --branch main --machine MACHINE --js
 cospaces workspace stop --codespace NAME --json
 ```
 
-Selection is deterministic. An explicit Codespace name is validated against the requested repository/ref. Otherwise `ensure` filters repository candidates and fails on zero or multiple matches. It creates only when `--create` is present. GitHub CLI prompting is disabled, so creation that needs an unresolved machine/devcontainer choice fails instead of opening an interactive selector.
+Selection is deterministic and fail-closed. An explicit Codespace name is validated against the requested repository/ref. Otherwise `ensure` filters repository candidates and fails on zero or multiple matches. When a ref is requested, unknown candidate-ref metadata also fails selection if it prevents proving that exactly one candidate matches; a known match is not chosen while another candidate could also match. Creation occurs only when `--create` is present.
+
+GitHub CLI prompting is disabled, so creation that needs an unresolved machine/devcontainer choice fails instead of opening an interactive selector. T1 control-plane calls are controller-time-bounded; a stalled call produces retryable infrastructure failure instead of waiting indefinitely.
 
 Workspace JSON normalises available GitHub data to `name`, `repository`, `ref`, `state`, `display_name`, and `machine`; unavailable metadata remains null/unknown. Normalised states are `available`, `shutdown`, `starting`, or `unknown`.
 
@@ -77,7 +79,7 @@ cospaces run --repo owner/repo --ref main --json -- python -m pytest -q
 cospaces run --codespace NAME --task-id issue-42 --correlation-id agent-pass-3 --json -- git status --short
 ```
 
-An explicit Codespace is described through T1 before execution. Repository targeting delegates to T1's deterministic repository/ref resolver. T2 never creates a workspace and never retries the remote task implicitly.
+An explicit Codespace is described through T1 before execution. Repository targeting delegates to T1's deterministic repository/ref resolver. T2 never creates a workspace and never retries the remote task implicitly. Invalid/non-finite timeouts and NUL-bearing argv are rejected before workspace lookup or transport work.
 
 JSON records include a unique `run_id`, caller metadata, timeout, observed exit status, timeout state, remote-completion state, duration/timestamps, captured output, workspace identity, and `transport = "gh-codespace-ssh"`. A remote non-zero status exits in category 5; controller/SSH transport failure is category 3; selection failure is category 4.
 
@@ -86,6 +88,8 @@ The SSH transport has deliberate truthfulness limits: status 255 is transport/am
 Live T2 execution requires GitHub CLI 2.62.0 or newer because earlier versions are affected by GitHub's Codespaces SSH security advisory. The target Codespace must also provide an SSH server.
 
 The controller does not inspect or serialize its credential stores or environment. Task argv/stdout/stderr are caller-selected data and are captured by design, so do not execute commands that print secrets when the resulting run record will be retained or shared.
+
+**Known v0.1 resource limit:** the current process adapter captures stdout/stderr in memory without an output-size bound. Timeout also cannot prove descendant/remote termination. Issue #22 tracks bounded/spooled output and local timeout cleanup; the current contract leaves remote completion `unknown` rather than overstating certainty.
 
 ## T3 checkpoint utility
 
@@ -100,6 +104,8 @@ cospaces checkpoint validate --task issue-42 --live --json
 ```
 
 Current files live at `.cospaces/checkpoints/<task-id>.json`; one previous valid revision is retained at `.cospaces/checkpoints/.history/<task-id>.json`. Saves use a temporary sibling plus atomic replacement where the host filesystem supports it. A corrupt current checkpoint is never silently overwritten.
+
+`cospaces.checkpoint/v1` is strict: unknown root or supported nested-object fields are rejected rather than silently discarded.
 
 By default `save` captures safe local Git context: normalized GitHub `owner/repo` when inferable, current ref, HEAD, and aggregate working-tree counts. It deliberately does not store filenames. `--no-git` disables that capture. Explicit `--repo`, `--ref`, and `--head` values override captured values.
 
@@ -141,23 +147,23 @@ working_directory = "."
 environment = { MODE = "ci" }
 ```
 
-Commands are argv arrays, not shell strings. Check names are unique inside a plan. `working_directory` is repository-relative and cannot escape the checkout. Environment overrides must be explicit string values; verification records expose only their keys, not their configured values.
+Commands are argv arrays, not shell strings. Check names are unique inside a plan. Timeouts must be finite. `working_directory` is lexically repository-relative and is then physically resolved in the Codespace; symlinks cannot escape the checkout. Environment overrides must be explicit string values; verification records expose only their keys, not their configured values.
 
-All checks execute in declaration order. The first resolved Codespace is reused for the rest of the plan. A remote failure or timeout in a required check makes the aggregate verification fail with exit category `7`; the verifier still runs later declared checks. Optional failures/timeouts remain visible but do not fail the required aggregate. Configuration errors, workspace selection failures, and transport/control-plane failures retain their own exit categories rather than being relabelled as failed tests.
+All checks execute in declaration order. The first resolved Codespace is reused for the rest of the plan. A genuine remote failure or timeout in a required check makes the aggregate verification fail with exit category `7`; the verifier still runs later declared checks. Optional failures/timeouts remain visible but do not fail the required aggregate. Configuration errors, workspace selection failures, transport/control-plane failures, and repository-root/containment setup failures retain infrastructure/selection categories rather than being relabelled as failed tests.
 
-Each invocation receives a unique `verification_id`. The `cospaces.verify/v1` record includes plan/task/correlation IDs, repository/ref/HEAD provenance when established, workspace identity, timestamps, aggregate `complete`/`passed` flags, and per-check T2 `run_id`, exit/timeout/completion summary, duration and failure code. T3 can store the verification ID in `records.last_verification_id`.
+Each invocation receives a unique `verification_id`. The `cospaces.verify/v1` record includes plan/task/correlation IDs, repository/ref/workspace provenance where established, timestamps, aggregate `complete`/`passed` flags, and per-check T2 `run_id`, exit/timeout/completion summary, duration and failure code. **T4 v1 does not currently observe the remote Git commit SHA, so `head` is null rather than borrowing the controller checkout HEAD.** T3 can store the verification ID in `records.last_verification_id`.
 
 For v0.1, the JSON result on stdout is authoritative; T4 does not create a persistent report file automatically. It also does not replace code review or invent product-correctness criteria—the repository declares what verification means.
 
 ## Phase 1 hardening status
 
-T1–T4 complete the intended first implementation tranche. Issue #18 adds a CI-enforced network-free hardening runner:
+T1–T4 complete the intended first implementation tranche. Issue #18 added a CI-enforced network-free hardening runner, and issue #20/PR #21 performed a repository-wide corrective audit:
 
 ```bash
 python tools/hardening_smoke.py --json
 ```
 
-It re-runs the complete T1–T4 contract suite and the cross-tool hardening cases, emitting one `cospaces.hardening/v1` result. The reconstructed-controller test verifies that checkpoint metadata, T1 workspace identity, T2 run IDs, T4 verification IDs, and passive `next` text survive handoff.
+The audit tightened target certainty, provenance truthfulness, physical verification containment, timeout/schema validation, and malformed-request preflight. The larger T2 output/process-tree limitation is tracked separately in #22 rather than being hidden by a partial fix.
 
 The real disposable-Codespace smoke is intentionally **not** automatic and remains pending until an existing disposable Codespace is named explicitly. See [`docs/HARDENING.md`](docs/HARDENING.md). Phase 2 remains deferred while that evidence is pending unless a later explicit decision changes the gate.
 
@@ -169,7 +175,7 @@ Routine CI never creates or runs a billable Codespace. To deliberately exercise 
 python tools/live_codespace_smoke.py --codespace NAME --checkpoint-root . --json
 ```
 
-The harness only operates on the named existing Codespace. It describes it, performs a bounded T2 status run, performs one temporary T4 verification, writes/shows/validates a generated T3 checkpoint, and cleans that checkpoint by default. It contains no create/delete/rebuild path.
+The harness only operates on the named existing Codespace. It describes it, performs a bounded cwd-independent T2 `git --version` probe, performs one temporary T4 repository-root verification, writes/shows/validates a generated T3 checkpoint, and cleans that checkpoint by default. It contains no create/delete/rebuild path.
 
 Connecting to a stopped Codespace may start billable compute, so invoking the harness is the explicit opt-in boundary. Stopping afterward is also explicit:
 

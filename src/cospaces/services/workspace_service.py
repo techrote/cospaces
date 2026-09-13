@@ -11,6 +11,7 @@ from cospaces.domain.contracts import DomainFailure, FailureKind
 from cospaces.domain.workspace import WorkspaceIdentity, workspace_from_payload
 
 _JSON_FIELDS = "name,repository,gitStatus,state,displayName,machineName"
+_CONTROL_PLANE_TIMEOUT_SECONDS = 120.0
 
 
 @dataclass(frozen=True)
@@ -62,14 +63,23 @@ class WorkspaceService:
     def _capture(
         self,
         arguments: tuple[str, ...],
+        *,
+        timeout_seconds: float = _CONTROL_PLANE_TIMEOUT_SECONDS,
     ) -> tuple[CommandResult | None, DomainFailure | None]:
         try:
-            result = self._github.capture(arguments)
+            result = self._github.capture(arguments, timeout_seconds=timeout_seconds)
         except OSError:
             return None, DomainFailure(
                 code="github_cli_unavailable",
                 kind=FailureKind.INFRASTRUCTURE,
                 message="GitHub CLI is unavailable",
+            )
+        if result.timed_out:
+            return None, DomainFailure(
+                code="codespaces_control_plane_timeout",
+                kind=FailureKind.INFRASTRUCTURE,
+                message="GitHub Codespaces control-plane operation timed out",
+                retryable=True,
             )
         if result.returncode == 0:
             return result, None
@@ -207,10 +217,17 @@ class WorkspaceService:
         candidates = list(listed.workspaces)
         if ref is not None:
             matching = [workspace for workspace in candidates if workspace.ref == ref]
-            if not matching and any(workspace.ref is None for workspace in candidates):
+            unknown = [workspace for workspace in candidates if workspace.ref is None]
+            if len(matching) > 1:
+                return self._failure(
+                    "ambiguous_workspace",
+                    "More than one matching Codespace was found",
+                    kind=FailureKind.SELECTION,
+                )
+            if unknown:
                 return self._failure(
                     "workspace_ref_unknown",
-                    "Cannot establish the ref for one or more candidate workspaces",
+                    "Cannot safely disambiguate candidates with unknown refs",
                     kind=FailureKind.SELECTION,
                 )
             candidates = matching

@@ -61,7 +61,9 @@ The supported schema is exactly `cospaces.checkpoint/v1`:
 }
 ```
 
-`repository`, `ref`, `head`, `workspace`, and `working_tree` may be null when unavailable or deliberately not captured. Workspace objects use the T1 normalized identity shape and reject unknown keys. T2/T4/T7 data is referenced by ID/path rather than embedding large output.
+The v1 root object is strict: unknown top-level fields are rejected instead of silently discarded. The nested `workspace`, `working_tree`, `progress`, and `records` objects are also strict about their supported keys. This makes misspellings/schema drift detectable at load time.
+
+`repository`, `ref`, `head`, `workspace`, and `working_tree` may be null when unavailable or deliberately not captured. Workspace objects use the T1 normalized identity shape. T2/T4/T7 data is referenced by ID/path rather than embedding large output.
 
 Bounds are compatibility/security controls:
 - notes: at most 4000 characters;

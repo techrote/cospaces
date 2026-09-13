@@ -1,5 +1,5 @@
 from cospaces.domain.verification import VerificationCheck
-from cospaces.verification_command import build_check_argv
+from cospaces.verification_command import VERIFY_SETUP_MARKER, build_check_argv
 
 
 def test_check_runs_from_repository_root_by_default() -> None:
@@ -15,6 +15,9 @@ def test_check_runs_from_repository_root_by_default() -> None:
     assert argv[4] == "."
     assert argv[5:] == ("python", "-m", "pytest")
     assert "/workspaces/$repo_name" in argv[2]
+    assert "pwd -P" in argv[2]
+    assert '"$root_real"/*' in argv[2]
+    assert VERIFY_SETUP_MARKER in argv[2]
 
 
 def test_working_directory_is_positional_data_not_script_text() -> None:

@@ -13,9 +13,12 @@ from cospaces.domain.verification import (
     VerificationCheckRecord,
     VerificationRecord,
 )
-from cospaces.services.repository_probe import RepositoryContext, RepositoryProbe
 from cospaces.services.run_service import RunActionResult, RunService
-from cospaces.verification_command import build_check_argv
+from cospaces.verification_command import (
+    VERIFY_SETUP_EXIT_CODES,
+    VERIFY_SETUP_MARKER,
+    build_check_argv,
+)
 from cospaces.verification_config import load_verification_plan
 
 
@@ -45,32 +48,44 @@ class VerificationService:
         root: Path,
         *,
         run_service: RunService | None = None,
-        probe: RepositoryProbe | None = None,
     ) -> None:
         self.root = root
         self._run = run_service or RunService()
-        self._probe = probe or RepositoryProbe(root)
 
-    def _repository_context(self) -> RepositoryContext | None:
-        result = self._probe.capture()
-        return result.context if result.ok else None
+    @staticmethod
+    def _effective_failure(result: RunActionResult) -> DomainFailure | None:
+        failure = result.failure
+        run = result.record
+        if (
+            failure is not None
+            and failure.kind is FailureKind.REMOTE
+            and run.exit_code in VERIFY_SETUP_EXIT_CODES
+            and VERIFY_SETUP_MARKER in run.stderr
+        ):
+            return DomainFailure(
+                code="verification_environment_error",
+                kind=FailureKind.INFRASTRUCTURE,
+                message="Verification could not establish a contained repository working directory",
+            )
+        return failure
 
     @staticmethod
     def _check_record(
         check: VerificationCheck,
         result: RunActionResult,
+        failure: DomainFailure | None,
     ) -> VerificationCheckRecord:
         run = result.record
         return VerificationCheckRecord(
             name=check.name,
             required=check.required,
-            passed=result.failure is None,
+            passed=failure is None,
             timed_out=run.timed_out,
             run_id=run.run_id,
             exit_code=run.exit_code,
             remote_completion=run.remote_completion,
             duration_ms=max(0, round(run.duration_seconds * 1000)),
-            failure_code=result.failure.code if result.failure is not None else None,
+            failure_code=failure.code if failure is not None else None,
             command=check.command,
             working_directory=check.working_directory,
             environment_keys=tuple(key for key, _value in check.environment),
@@ -83,7 +98,6 @@ class VerificationService:
         request: VerificationRequest,
         repository: str | None,
         ref: str | None,
-        head: str | None,
         workspace: Mapping[str, object] | None,
         started_at: str,
         complete: bool,
@@ -97,7 +111,7 @@ class VerificationService:
             correlation_id=request.correlation_id,
             repository=repository,
             ref=ref,
-            head=head,
+            head=None,
             workspace=workspace,
             started_at=started_at,
             finished_at=utc_now(),
@@ -105,16 +119,6 @@ class VerificationService:
             passed=passed,
             checks=tuple(checks),
         )
-
-    @staticmethod
-    def _head_matches_workspace(
-        context: RepositoryContext | None,
-        repository: str | None,
-        ref: str | None,
-    ) -> bool:
-        if context is None or repository is None or ref is None:
-            return False
-        return repository == context.repository and ref == context.ref
 
     def verify(self, request: VerificationRequest) -> VerificationActionResult:
         loaded = load_verification_plan(self.root, request.plan)
@@ -134,17 +138,8 @@ class VerificationService:
 
         verification_id = str(uuid4())
         started_at = utc_now()
-        context = self._repository_context()
         provenance_repository = request.repository
         provenance_ref = request.ref
-        head: str | None = None
-        if context is not None and self._head_matches_workspace(
-            context,
-            request.repository,
-            request.ref,
-        ):
-            head = context.head
-
         selected_codespace = request.codespace
         workspace_payload: Mapping[str, object] | None = None
         check_records: list[VerificationCheckRecord] = []
@@ -162,7 +157,8 @@ class VerificationService:
                     correlation_id=verification_id,
                 )
             )
-            check_record = self._check_record(check, run_result)
+            failure = self._effective_failure(run_result)
+            check_record = self._check_record(check, run_result, failure)
             check_records.append(check_record)
 
             if run_result.workspace is not None:
@@ -173,34 +169,21 @@ class VerificationService:
                     provenance_repository = run_result.workspace.repository
                 if run_result.workspace.ref is not None:
                     provenance_ref = run_result.workspace.ref
-                if self._head_matches_workspace(
-                    context,
-                    run_result.workspace.repository,
-                    run_result.workspace.ref,
-                ):
-                    assert context is not None
-                    head = context.head
-                else:
-                    head = None
 
-            if run_result.failure is not None:
-                if run_result.failure.kind is not FailureKind.REMOTE:
+            if failure is not None:
+                if failure.kind is not FailureKind.REMOTE:
                     record = self._record(
                         verification_id=verification_id,
                         request=request,
                         repository=provenance_repository,
                         ref=provenance_ref,
-                        head=head,
                         workspace=workspace_payload,
                         started_at=started_at,
                         complete=False,
                         passed=False,
                         checks=check_records,
                     )
-                    return VerificationActionResult(
-                        record=record,
-                        failure=run_result.failure,
-                    )
+                    return VerificationActionResult(record=record, failure=failure)
                 if check.required:
                     required_failed = True
 
@@ -210,7 +193,6 @@ class VerificationService:
             request=request,
             repository=provenance_repository,
             ref=provenance_ref,
-            head=head,
             workspace=workspace_payload,
             started_at=started_at,
             complete=True,

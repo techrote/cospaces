@@ -9,18 +9,37 @@ class FakeGitHub(GitHubCliAdapter):
     def __init__(self, responses: list[CommandResult | BaseException]) -> None:
         self.responses = responses
         self.calls: list[tuple[str, ...]] = []
+        self.timeouts: list[float | None] = []
 
-    def capture(self, arguments: tuple[str, ...]) -> CommandResult:
+    def capture(
+        self,
+        arguments: tuple[str, ...],
+        *,
+        timeout_seconds: float | None = None,
+    ) -> CommandResult:
         self.calls.append(arguments)
+        self.timeouts.append(timeout_seconds)
         response = self.responses.pop(0)
         if isinstance(response, BaseException):
             raise response
         return response
 
 
-def result(stdout: object, *, returncode: int = 0, stderr: str = "") -> CommandResult:
+def result(
+    stdout: object,
+    *,
+    returncode: int = 0,
+    stderr: str = "",
+    timed_out: bool = False,
+) -> CommandResult:
     text = stdout if isinstance(stdout, str) else json.dumps(stdout)
-    return CommandResult(argv=("gh",), returncode=returncode, stdout=text, stderr=stderr)
+    return CommandResult(
+        argv=("gh",),
+        returncode=returncode,
+        stdout=text,
+        stderr=stderr,
+        timed_out=timed_out,
+    )
 
 
 def workspace(name: str, *, ref: str = "main", repo: str = "owner/repo") -> dict[str, object]:
@@ -34,7 +53,7 @@ def workspace(name: str, *, ref: str = "main", repo: str = "owner/repo") -> dict
     }
 
 
-def test_list_uses_repository_filter_and_machine_json() -> None:
+def test_list_uses_repository_filter_and_bounded_machine_json() -> None:
     github = FakeGitHub([result([workspace("one")])])
     service = WorkspaceService(github)
 
@@ -54,6 +73,19 @@ def test_list_uses_repository_filter_and_machine_json() -> None:
             "name,repository,gitStatus,state,displayName,machineName",
         )
     ]
+    assert github.timeouts == [120.0]
+
+
+def test_control_plane_timeout_is_retryable_infrastructure_failure() -> None:
+    service = WorkspaceService(FakeGitHub([result("", returncode=0, timed_out=True)]))
+
+    listed = service.list("owner/repo")
+
+    assert not listed.ok
+    assert listed.failure is not None
+    assert listed.failure.code == "codespaces_control_plane_timeout"
+    assert listed.failure.retryable is True
+    assert int(listed.failure.exit_status) == 3
 
 
 def test_resolve_filters_exact_ref() -> None:
@@ -84,6 +116,18 @@ def test_resolve_unknown_candidate_ref_is_not_guessed() -> None:
     unknown = workspace("one")
     unknown["gitStatus"] = {}
     service = WorkspaceService(FakeGitHub([result([unknown])]))
+
+    resolved = service.resolve("owner/repo", ref="feature")
+
+    assert not resolved.ok
+    assert resolved.failure is not None
+    assert resolved.failure.code == "workspace_ref_unknown"
+
+
+def test_known_match_plus_unknown_ref_is_not_silently_selected() -> None:
+    unknown = workspace("unknown")
+    unknown["gitStatus"] = {}
+    service = WorkspaceService(FakeGitHub([result([workspace("known", ref="feature"), unknown])]))
 
     resolved = service.resolve("owner/repo", ref="feature")
 
