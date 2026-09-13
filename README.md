@@ -41,6 +41,7 @@ python -m ruff check .
 python -m ruff format --check .
 python -m mypy src/cospaces
 python -m pytest
+python tools/hardening_smoke.py --json
 python -m build
 python -m cospaces --help
 cospaces --help
@@ -148,28 +149,32 @@ Each invocation receives a unique `verification_id`. The `cospaces.verify/v1` re
 
 For v0.1, the JSON result on stdout is authoritative; T4 does not create a persistent report file automatically. It also does not replace code review or invent product-correctness criteria—the repository declares what verification means.
 
-## MVP boundary
+## Phase 1 hardening status
 
-T1–T4 complete the intended first implementation tranche. Before beginning T5–T8, follow the Phase 1 hardening gate in `docs/ROADMAP.md`: review schemas/contracts, perform disposable live Codespace smoke exercises, test stop/reconnect/checkpoint recovery, exercise verify-pass and verify-fail paths, and reconcile documentation.
-
-The remaining four tool names stay routing stubs until that gate is deliberately passed.
-
-## Opt-in live smoke tests
-
-Routine CI uses mocked GitHub CLI/SSH responses and does not create or run billable Codespaces. With an already-existing disposable Codespace, T1/T2/T4 smoke checks are:
+T1–T4 complete the intended first implementation tranche. Issue #18 adds a CI-enforced network-free hardening runner:
 
 ```bash
-cospaces workspace describe --codespace NAME --json
-cospaces run --codespace NAME --json -- git status --short
-cospaces verify default --codespace NAME --json
+python tools/hardening_smoke.py --json
 ```
 
-T3 itself does not require a live Codespace. A local repository smoke path is:
+It re-runs the complete T1–T4 contract suite and the cross-tool hardening cases, emitting one `cospaces.hardening/v1` result. The reconstructed-controller test verifies that checkpoint metadata, T1 workspace identity, T2 run IDs, T4 verification IDs, and passive `next` text survive handoff.
+
+The real disposable-Codespace smoke is intentionally **not** automatic and remains pending until an existing disposable Codespace is named explicitly. See [`docs/HARDENING.md`](docs/HARDENING.md). Phase 2 remains deferred while that evidence is pending unless a later explicit decision changes the gate.
+
+## Opt-in live smoke
+
+Routine CI never creates or runs a billable Codespace. To deliberately exercise all four MVP tools against one existing disposable Codespace:
 
 ```bash
-cospaces checkpoint save --task smoke --current "checkpoint smoke" --next "delete smoke checkpoint" --json
-cospaces checkpoint show --task smoke --json
-cospaces checkpoint validate --task smoke --live --json
+python tools/live_codespace_smoke.py --codespace NAME --checkpoint-root . --json
 ```
 
-Creation is intentionally separate because it may incur Codespaces usage. If a disposable live creation test is desired, create it explicitly with T1, verify the returned identity, run the T2/T4 smoke commands, then stop it explicitly. The MVP never deletes or rebuilds a workspace automatically.
+The harness only operates on the named existing Codespace. It describes it, performs a bounded T2 status run, performs one temporary T4 verification, writes/shows/validates a generated T3 checkpoint, and cleans that checkpoint by default. It contains no create/delete/rebuild path.
+
+Connecting to a stopped Codespace may start billable compute, so invoking the harness is the explicit opt-in boundary. Stopping afterward is also explicit:
+
+```bash
+python tools/live_codespace_smoke.py --codespace NAME --stop-after --json
+```
+
+Use `--keep-checkpoint` only when the generated smoke checkpoint should remain for inspection.
