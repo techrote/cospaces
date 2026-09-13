@@ -1,8 +1,8 @@
 """Top-level cospaces command-line interface."""
 
 import argparse
-from collections.abc import Sequence
 import sys
+from collections.abc import Sequence
 from typing import cast
 
 from . import __version__
