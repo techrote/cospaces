@@ -38,9 +38,7 @@ class Stage:
 
 
 PROFILES: dict[str, tuple[Stage, ...]] = {
-    "smoke": (
-        Stage("module_help", ("{python}", "-m", "cospaces", "--help")),
-    ),
+    "smoke": (Stage("module_help", ("{python}", "-m", "cospaces", "--help")),),
     "core": (
         Stage("hardening", ("{python}", "tools/hardening_smoke.py", "--json")),
         Stage(
@@ -267,9 +265,7 @@ def summarize(iterations: list[dict[str, object]]) -> dict[str, object]:
             "median_wall_seconds": round(statistics.median(wall), 6),
             "min_wall_seconds": round(min(wall), 6),
             "max_wall_seconds": round(max(wall), 6),
-            "median_child_cpu_seconds": None
-            if not cpu
-            else round(statistics.median(cpu), 6),
+            "median_child_cpu_seconds": None if not cpu else round(statistics.median(cpu), 6),
         }
     return summary
 
