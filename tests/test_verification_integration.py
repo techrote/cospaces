@@ -56,3 +56,16 @@ def write_plan(root: Path) -> None:
         "[[verify.default.checks]]\nname = \"two\"\ncommand = [\"example-two\"]\n",
         encoding="utf-8",
     )
+
+
+def test_unknown_plan_does_not_execute_remote_work(tmp_path: Path) -> None:
+    write_plan(tmp_path)
+    runner = FakeRunService([])
+    service = VerificationService(tmp_path, run_service=runner)  # type: ignore[arg-type]
+
+    result = service.verify(VerificationRequest(plan="missing", codespace="space-one"))
+
+    assert not result.ok
+    assert result.failure is not None
+    assert result.failure.code == "verification_plan_not_found"
+    assert runner.requests == []
