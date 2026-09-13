@@ -1,8 +1,8 @@
 """Repository-local configuration model and parser."""
 
+import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
-import tomllib
 from typing import Any
 
 from .domain.contracts import DomainFailure, FailureKind
