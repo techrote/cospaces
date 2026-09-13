@@ -4,7 +4,12 @@ from cospaces.domain.checkpoint import CheckpointDocument
 from cospaces.services.checkpoint_store import CheckpointStore
 
 
-def document(task: str = "issue-4", *, updated: str = "2026-09-13T19:01:00Z", notes: str = "one") -> CheckpointDocument:
+def document(
+    task: str = "issue-4",
+    *,
+    updated: str = "2026-09-13T19:01:00Z",
+    notes: str = "one",
+) -> CheckpointDocument:
     return CheckpointDocument(
         task_id=task,
         created_at="2026-09-13T19:00:00Z",
@@ -39,7 +44,9 @@ def test_update_retains_one_previous_valid_revision(tmp_path) -> None:
     saved = store.save(second)
 
     assert saved.ok
-    assert saved.previous_path == tmp_path / ".cospaces" / "checkpoints" / ".history" / "issue-4.json"
+    assert saved.previous_path == (
+        tmp_path / ".cospaces" / "checkpoints" / ".history" / "issue-4.json"
+    )
     previous = json.loads(saved.previous_path.read_text(encoding="utf-8"))
     current = json.loads(saved.path.read_text(encoding="utf-8"))
     assert previous["notes"] == "first"
