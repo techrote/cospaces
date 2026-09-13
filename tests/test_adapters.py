@@ -50,7 +50,5 @@ def test_github_cli_adapter_disables_prompts_and_can_be_stubbed() -> None:
 
     result = adapter.capture(("codespace", "list"))
 
-    assert fake.calls == [
-        (("gh", "codespace", "list"), {"GH_PROMPT_DISABLED": "1"})
-    ]
+    assert fake.calls == [(("gh", "codespace", "list"), {"GH_PROMPT_DISABLED": "1"})]
     assert result.stdout == "ok"
