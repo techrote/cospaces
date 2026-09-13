@@ -34,9 +34,16 @@ def _failure(code: str, message: str) -> VerificationPlanLoadResult:
     )
 
 
-def _text(value: Any, label: str, *, limit: int = _MAX_ARG_CHARS) -> str:
-    if not isinstance(value, str) or not value:
-        raise ValueError(f"{label} must be a non-empty string")
+def _text(
+    value: Any,
+    label: str,
+    *,
+    limit: int = _MAX_ARG_CHARS,
+    allow_empty: bool = False,
+) -> str:
+    if not isinstance(value, str) or (not value and not allow_empty):
+        requirement = "a string" if allow_empty else "a non-empty string"
+        raise ValueError(f"{label} must be {requirement}")
     if len(value) > limit:
         raise ValueError(f"{label} exceeds {limit} characters")
     if "\x00" in value:
@@ -68,7 +75,7 @@ def _environment(value: Any) -> tuple[tuple[str, str], ...]:
     for raw_key, raw_value in sorted(value.items()):
         if not isinstance(raw_key, str) or _ENV_RE.fullmatch(raw_key) is None:
             raise ValueError("environment keys must be POSIX variable names")
-        item = _text(raw_value, f"environment.{raw_key}")
+        item = _text(raw_value, f"environment.{raw_key}", allow_empty=True)
         result.append((raw_key, item))
     return tuple(result)
 
@@ -97,9 +104,16 @@ def _check(payload: Any, index: int) -> VerificationCheck:
         raise ValueError(f"checks[{index}].command must be a non-empty array")
     if len(raw_command) > _MAX_ARGS:
         raise ValueError(f"checks[{index}].command exceeds {_MAX_ARGS} arguments")
-    command = tuple(
-        _text(item, f"checks[{index}].command item") for item in raw_command
-    )
+    command_items: list[str] = []
+    for item_index, item in enumerate(raw_command):
+        command_items.append(
+            _text(
+                item,
+                f"checks[{index}].command item",
+                allow_empty=item_index > 0,
+            )
+        )
+    command = tuple(command_items)
 
     raw_timeout = payload.get("timeout_seconds", 600)
     if isinstance(raw_timeout, bool) or not isinstance(raw_timeout, (int, float)):
