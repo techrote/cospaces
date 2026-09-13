@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cospaces"
+version = "0.0.1"
+description = "Task-oriented GitHub Codespaces utilities for long-horizon agentic development"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "build==1.2.2.post1",
+  "mypy==1.15.0",
+  "pytest==8.3.5",
+  "ruff==0.11.2",
+]
+
+[project.scripts]
+cospaces = "cospaces.cli:entrypoint"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "SIM", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+packages = ["cospaces"]
+mypy_path = "src"
