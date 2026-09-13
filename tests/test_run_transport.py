@@ -1,6 +1,10 @@
 from cospaces.adapters.github_cli import GitHubCliAdapter
 from cospaces.adapters.process import CommandResult
-from cospaces.services.run_transport import CodespaceSshTransport, encode_remote_argv, parse_gh_version
+from cospaces.services.run_transport import (
+    CodespaceSshTransport,
+    encode_remote_argv,
+    parse_gh_version,
+)
 
 
 class FakeGitHub(GitHubCliAdapter):
