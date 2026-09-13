@@ -5,7 +5,6 @@ from cospaces.domain.checkpoint import WorkingTreeState
 from cospaces.domain.contracts import DomainFailure, FailureKind
 from cospaces.domain.run import RunRecord
 from cospaces.domain.workspace import WorkspaceIdentity
-from cospaces.services.checkpoint_service import CheckpointSaveRequest, CheckpointService
 from cospaces.services.repository_probe import RepositoryContext, RepositoryProbeResult
 from cospaces.services.run_service import RunActionResult
 from cospaces.services.verification_service import VerificationRequest, VerificationService
@@ -133,7 +132,10 @@ def test_checks_run_sequentially_and_lock_first_workspace(tmp_path: Path) -> Non
     ]
     assert runner.requests[0].codespace is None
     assert runner.requests[1].codespace == "space-one"
-    assert all(request.correlation_id == result.record.verification_id for request in runner.requests)
+    assert all(
+        request.correlation_id == result.record.verification_id
+        for request in runner.requests
+    )
     assert UUID(result.record.verification_id)
     assert result.record.repository == "owner/repo"
     assert result.record.ref == "main"
