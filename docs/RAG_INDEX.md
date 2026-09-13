@@ -14,8 +14,9 @@ When instructions conflict, use this order unless a newer decision explicitly su
 6. `docs/TOOL_CATALOG.md`, for tool responsibilities and non-goals.
 7. `docs/ROADMAP.md`, for sequencing and dependency intent.
 8. `docs/HARDENING.md`, for current Phase 1 hardening evidence/status.
-9. `docs/ISSUE_ATLAS.md`, for issue-number navigation only.
-10. `README.md`, for orientation only.
+9. `docs/EXTERNAL_WORKLOAD.md`, for the repository-owned portable host-qualification workload contract.
+10. `docs/ISSUE_ATLAS.md`, for issue-number navigation only.
+11. `README.md`, for orientation only.
 
 If ambiguity remains and safe progress is possible, choose the smallest reversible implementation consistent with the higher-authority documents and record the decision in the PR. Do not broaden scope merely because adjacent functionality is attractive.
 
@@ -47,6 +48,9 @@ Also read `docs/VERIFICATION_EVIDENCE.md`.
 ### Phase 1 hardening or Phase 2 activation work
 Also read `docs/HARDENING.md`. Do not infer that the live Codespace sub-gate passed merely because network-free CI is green.
 
+### External workload / foreign-host qualification work
+Also read `docs/EXTERNAL_WORKLOAD.md`. External orchestrators own host access, scheduling, provider policy and evidence interpretation; `cospaces` owns only its repository-local bounded workload definition and result contract.
+
 ## Programme vocabulary
 
 - **controller**: the local/client-side `cospaces` process invoking GitHub CLI and coordinating operations.
@@ -58,6 +62,7 @@ Also read `docs/HARDENING.md`. Do not infer that the live Codespace sub-gate pas
 - **evidence bundle**: a provenance-bearing set of logs/results/artifacts for a run or verification.
 - **fixture**: a declarative reproducible experiment or benchmark.
 - **matrix**: repeated comparable execution over explicit dimensions such as refs, configurations, or machine profiles.
+- **external workload**: the repository-owned bounded warm workload exposed by `tools/external_workload.py` for measurement by a foreign host/orchestrator; it is not one of the eight product tools.
 
 ## Eight-tool programme
 
@@ -76,6 +81,8 @@ These four prove the complete minimum loop: acquire a prepared environment, exec
 8. `matrix`
 
 These add richer environment truth, experiment reproducibility, evidence packaging, and comparative execution after the basic loop is reliable. Activation remains subject to the Phase 1 hardening gate recorded in `docs/HARDENING.md`.
+
+The external qualification workload is supporting repository machinery, not a ninth tool and not early implementation of T6 `fixture`.
 
 ## Agent operating rule
 
