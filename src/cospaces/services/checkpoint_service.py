@@ -131,6 +131,17 @@ class CheckpointService:
             ref = ref if ref is not None else existing.ref
             head = head if head is not None else existing.head
 
+        if request.current is not None:
+            current_progress = request.current
+        else:
+            current_progress = existing_progress.current
+        if request.notes is not None:
+            checkpoint_notes = request.notes
+        elif existing is not None:
+            checkpoint_notes = existing.notes
+        else:
+            checkpoint_notes = ""
+
         document = CheckpointDocument(
             task_id=request.task_id,
             created_at=existing.created_at if existing is not None else now,
@@ -144,7 +155,7 @@ class CheckpointService:
                 completed=request.completed
                 if request.completed is not None
                 else existing_progress.completed,
-                current=(request.current if request.current is not None else existing_progress.current),
+                current=current_progress,
                 next_step=request.next_step
                 if request.next_step is not None
                 else existing_progress.next_step,
@@ -160,7 +171,7 @@ class CheckpointService:
                 if request.record_paths is not None
                 else existing_records.paths,
             ),
-            notes=(request.notes if request.notes is not None else (existing.notes if existing else "")),
+            notes=checkpoint_notes,
         )
         try:
             validated = checkpoint_from_dict(document.to_dict())
