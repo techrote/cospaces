@@ -104,7 +104,7 @@ def test_verify_pass_uses_real_parser_config_service_and_output(tmp_path: Path, 
     assert len(runner.requests) == 2
 
 
-def test_verify_required_failure_is_exit_seven_and_keeps_later_check(tmp_path: Path, capsys) -> None:
+def test_verify_failure_is_exit_seven_and_keeps_later_check(tmp_path: Path, capsys) -> None:
     write_plan(tmp_path)
     runner = FakeRunService([run_result("run-a", failed=True), run_result("run-b")])
 
