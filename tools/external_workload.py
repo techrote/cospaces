@@ -15,9 +15,8 @@ import sys
 import tempfile
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
 try:
     import resource
@@ -80,7 +79,7 @@ PROFILES: dict[str, tuple[Stage, ...]] = {
 
 
 def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 def _load_average() -> list[float] | None:
@@ -290,7 +289,10 @@ def parser() -> argparse.ArgumentParser:
 def validate_arguments(args: argparse.Namespace) -> str | None:
     if not 1 <= args.repetitions <= MAX_REPETITIONS:
         return f"repetitions must be within [1, {MAX_REPETITIONS}]"
-    if not math.isfinite(args.interval_seconds) or not 0 <= args.interval_seconds <= MAX_INTERVAL_SECONDS:
+    if (
+        not math.isfinite(args.interval_seconds)
+        or not 0 <= args.interval_seconds <= MAX_INTERVAL_SECONDS
+    ):
         return f"interval-seconds must be within [0, {MAX_INTERVAL_SECONDS}]"
     if (
         not math.isfinite(args.stage_timeout_seconds)
@@ -416,10 +418,16 @@ def main() -> int:
         if index < args.repetitions and args.interval_seconds > 0:
             time.sleep(args.interval_seconds)
 
+    failure = None
+    if not overall_ok:
+        failure = {
+            "code": "stage_failed",
+            "message": "a required workload stage failed",
+        }
     base.update(
         {
             "ok": overall_ok,
-            "error": None if overall_ok else {"code": "stage_failed", "message": "a required workload stage failed"},
+            "error": failure,
             "finished_at": utc_now(),
             "duration_seconds": round(max(0.0, time.monotonic() - started_clock), 6),
             "iterations": iterations,
