@@ -78,3 +78,37 @@ def test_resolve_zero_candidates_is_not_found() -> None:
     assert resolved.failure is not None
     assert resolved.failure.code == "workspace_not_found"
     assert int(resolved.failure.exit_status) == 4
+
+
+def test_resolve_multiple_candidates_is_ambiguous() -> None:
+    service = WorkspaceService(
+        FakeGitHub([result([workspace("one"), workspace("two")])])
+    )
+
+    resolved = service.resolve("owner/repo")
+
+    assert not resolved.ok
+    assert resolved.failure is not None
+    assert resolved.failure.code == "ambiguous_workspace"
+
+
+def test_explicit_name_is_described_and_repository_mismatch_is_rejected() -> None:
+    github = FakeGitHub([result(workspace("chosen", repo="other/repo"))])
+    service = WorkspaceService(github)
+
+    resolved = service.resolve("owner/repo", name="chosen")
+
+    assert not resolved.ok
+    assert resolved.failure is not None
+    assert resolved.failure.code == "workspace_repository_mismatch"
+    assert github.calls[0][:4] == ("codespace", "view", "--codespace", "chosen")
+
+
+def test_explicit_name_ref_mismatch_is_rejected() -> None:
+    service = WorkspaceService(FakeGitHub([result(workspace("chosen", ref="other"))]))
+
+    resolved = service.resolve("owner/repo", ref="wanted", name="chosen")
+
+    assert not resolved.ok
+    assert resolved.failure is not None
+    assert resolved.failure.code == "workspace_ref_mismatch"
