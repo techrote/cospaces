@@ -104,9 +104,7 @@ def test_repository_target_delegates_to_t1_resolution() -> None:
     transport = FakeTransport(TransportOutcome(result=process_result(0)))
     service = RunService(workspace=workspace, transport=transport)  # type: ignore[arg-type]
 
-    outcome = service.execute(
-        RunRequest(argv=("true",), repository="owner/repo", ref="main")
-    )
+    outcome = service.execute(RunRequest(argv=("true",), repository="owner/repo", ref="main"))
 
     assert outcome.ok
     assert workspace.calls == [("resolve", "owner/repo", "main", None)]
