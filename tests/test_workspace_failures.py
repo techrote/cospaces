@@ -9,7 +9,13 @@ class FakeGitHub(GitHubCliAdapter):
     def __init__(self, responses: list[CommandResult | BaseException]) -> None:
         self.responses = responses
 
-    def capture(self, arguments: tuple[str, ...]) -> CommandResult:
+    def capture(
+        self,
+        arguments: tuple[str, ...],
+        *,
+        timeout_seconds: float | None = None,
+    ) -> CommandResult:
+        del arguments, timeout_seconds
         response = self.responses.pop(0)
         if isinstance(response, BaseException):
             raise response
