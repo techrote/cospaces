@@ -72,9 +72,7 @@ def test_transport_preflight_failure_is_distinct() -> None:
 
 def test_missing_target_is_usage_failure_without_transport() -> None:
     transport = FakeTransport(
-        TransportOutcome(
-            result=CommandResult(argv=("gh",), returncode=0, stdout="", stderr="")
-        )
+        TransportOutcome(result=CommandResult(argv=("gh",), returncode=0, stdout="", stderr=""))
     )
     service = RunService(workspace=FakeWorkspace(), transport=transport)  # type: ignore[arg-type]
 
