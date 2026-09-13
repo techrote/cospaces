@@ -1,5 +1,6 @@
 """Repository-declared verification orchestration over T2 runs."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
@@ -83,7 +84,7 @@ class VerificationService:
         repository: str | None,
         ref: str | None,
         head: str | None,
-        workspace: dict[str, object] | None,
+        workspace: Mapping[str, object] | None,
         started_at: str,
         complete: bool,
         passed: bool,
@@ -134,7 +135,7 @@ class VerificationService:
                 head = context.head
 
         selected_codespace = request.codespace
-        workspace_payload: dict[str, object] | None = None
+        workspace_payload: Mapping[str, object] | None = None
         check_records: list[VerificationCheckRecord] = []
         required_failed = False
 
