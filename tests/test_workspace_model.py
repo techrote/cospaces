@@ -33,3 +33,19 @@ def test_workspace_payload_preserves_unknown_metadata_as_null() -> None:
     assert workspace.display_name is None
     assert workspace.machine is None
     assert workspace.state == "unknown"
+
+
+def test_workspace_payload_supports_structured_repository_shape() -> None:
+    workspace = workspace_from_payload(
+        {
+            "name": "space-one",
+            "repository": {"owner": {"login": "owner"}, "name": "repo"},
+        }
+    )
+
+    assert workspace is not None
+    assert workspace.repository == "owner/repo"
+
+
+def test_workspace_payload_requires_name() -> None:
+    assert workspace_from_payload({"state": "Available"}) is None
