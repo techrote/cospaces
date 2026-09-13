@@ -1,13 +1,13 @@
 import json
 
+from cospaces.domain import results
 from cospaces.domain.checkpoint import SCHEMA as CHECKPOINT_SCHEMA
 from cospaces.domain.contracts import DomainFailure, ExitStatus, FailureKind
-from cospaces.domain.results import ResultEnvelope, SCHEMA as RESULT_SCHEMA
 from cospaces.domain.verification import SCHEMA as VERIFY_SCHEMA
 
 
 def test_schema_versions_are_explicit_and_stable() -> None:
-    assert RESULT_SCHEMA == "cospaces.result/v1"
+    assert results.SCHEMA == "cospaces.result/v1"
     assert CHECKPOINT_SCHEMA == "cospaces.checkpoint/v1"
     assert VERIFY_SCHEMA == "cospaces.verify/v1"
 
@@ -38,7 +38,7 @@ def test_failure_kinds_keep_their_exit_categories() -> None:
 
 
 def test_common_json_envelope_is_one_versioned_document() -> None:
-    envelope = ResultEnvelope(
+    envelope = results.ResultEnvelope(
         operation="hardening.example",
         ok=True,
         started_at="2026-09-13T20:00:00Z",
