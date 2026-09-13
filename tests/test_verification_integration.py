@@ -4,12 +4,10 @@ from uuid import UUID
 from cospaces.domain.checkpoint import (
     CheckpointDocument,
     RecordReferences,
-    WorkingTreeState,
     checkpoint_from_dict,
 )
 from cospaces.domain.run import RunRecord
 from cospaces.domain.workspace import WorkspaceIdentity
-from cospaces.services.repository_probe import RepositoryContext, RepositoryProbeResult
 from cospaces.services.run_service import RunActionResult
 from cospaces.services.verification_service import VerificationRequest, VerificationService
 
@@ -22,18 +20,6 @@ class FakeRunService:
     def execute(self, request):
         self.requests.append(request)
         return self.outcomes.pop(0)
-
-
-class DifferentLocalProbe:
-    def capture(self) -> RepositoryProbeResult:
-        return RepositoryProbeResult(
-            context=RepositoryContext(
-                repository="controller/repo",
-                ref="controller-branch",
-                head="controller-head",
-                working_tree=WorkingTreeState(dirty=False, summary="clean"),
-            )
-        )
 
 
 def success(run_id: str) -> RunActionResult:
@@ -89,14 +75,10 @@ def test_unknown_plan_does_not_execute_remote_work(tmp_path: Path) -> None:
     assert runner.requests == []
 
 
-def test_explicit_codespace_does_not_inherit_controller_repo_as_target(tmp_path: Path) -> None:
+def test_explicit_codespace_uses_remote_identity_without_inventing_head(tmp_path: Path) -> None:
     write_plan(tmp_path)
     runner = FakeRunService([success("r1"), success("r2")])
-    service = VerificationService(
-        tmp_path,
-        run_service=runner,  # type: ignore[arg-type]
-        probe=DifferentLocalProbe(),  # type: ignore[arg-type]
-    )
+    service = VerificationService(tmp_path, run_service=runner)  # type: ignore[arg-type]
 
     result = service.verify(VerificationRequest(codespace="space-one"))
 
