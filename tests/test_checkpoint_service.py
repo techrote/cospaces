@@ -136,7 +136,9 @@ def test_invalid_task_id_is_usage_failure(tmp_path) -> None:
     assert int(result.failure.exit_status) == 2
 
 
-def test_no_git_mode_does_not_capture_environment_or_invent_repository(tmp_path, monkeypatch) -> None:
+def test_no_git_mode_does_not_capture_environment_or_invent_repository(
+    tmp_path, monkeypatch
+) -> None:
     monkeypatch.setenv("COSPACES_TEST_SECRET", "do-not-capture-this")
     service = CheckpointService(tmp_path, probe=FakeProbe(context()))  # type: ignore[arg-type]
 
