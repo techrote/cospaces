@@ -40,3 +40,35 @@ class FakeRunService:
                 finished_at="2026-09-13T19:00:00.250000Z",
             ),
         )
+
+
+def test_timeout_parser_supports_seconds_minutes_and_hours() -> None:
+    assert parse_timeout("5") == 5.0
+    assert parse_timeout("2.5s") == 2.5
+    assert parse_timeout("10m") == 600.0
+    assert parse_timeout("1h") == 3600.0
+    assert parse_timeout("nonsense") is None
+
+
+def test_parser_preserves_explicit_task_boundary_and_arguments() -> None:
+    namespace = build_parser().parse_args(
+        [
+            "run",
+            "--codespace",
+            "space-one",
+            "--timeout",
+            "10m",
+            "--task-id",
+            "issue-3",
+            "--correlation-id",
+            "chat-1",
+            "--json",
+            "--",
+            "printf",
+            "%s",
+            "a b",
+            "--literal",
+        ]
+    )
+
+    assert namespace.remote_argv == ["--", "printf", "%s", "a b", "--literal"]
