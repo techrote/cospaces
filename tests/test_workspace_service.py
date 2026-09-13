@@ -80,6 +80,18 @@ def test_resolve_zero_candidates_is_not_found() -> None:
     assert int(resolved.failure.exit_status) == 4
 
 
+def test_resolve_unknown_candidate_ref_is_not_guessed() -> None:
+    unknown = workspace("one")
+    unknown["gitStatus"] = {}
+    service = WorkspaceService(FakeGitHub([result([unknown])]))
+
+    resolved = service.resolve("owner/repo", ref="feature")
+
+    assert not resolved.ok
+    assert resolved.failure is not None
+    assert resolved.failure.code == "workspace_ref_unknown"
+
+
 def test_resolve_multiple_candidates_is_ambiguous() -> None:
     service = WorkspaceService(
         FakeGitHub([result([workspace("one"), workspace("two")])])
