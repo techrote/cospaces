@@ -9,7 +9,7 @@ from cospaces.domain.results import utc_now
 from cospaces.domain.run import RunRecord, RunRequest
 from cospaces.domain.workspace import WorkspaceIdentity
 from cospaces.services.run_transport import CodespaceSshTransport, TRANSPORT_NAME
-from cospaces.services.workspace_service import WorkspaceService
+from cospaces.services.workspace_service import WorkspaceActionResult, WorkspaceService
 
 
 @dataclass(frozen=True)
@@ -64,7 +64,13 @@ class RunService:
             finished_at=utc_now(),
         )
 
-    def _resolve_target(self, request: RunRequest):
+    @staticmethod
+    def _target_failure(code: str, message: str, kind: FailureKind) -> WorkspaceActionResult:
+        return WorkspaceActionResult(
+            failure=DomainFailure(code=code, kind=kind, message=message)
+        )
+
+    def _resolve_target(self, request: RunRequest) -> WorkspaceActionResult:
         if request.codespace is not None:
             if request.repository is not None:
                 return self._workspace.resolve(
@@ -77,23 +83,23 @@ class RunService:
                 target = described.workspace
                 assert target is not None
                 if target.ref is None:
-                    return self._workspace._failure(
+                    return self._target_failure(
                         "workspace_ref_unknown",
                         "Cannot establish the selected workspace ref",
-                        kind=FailureKind.SELECTION,
+                        FailureKind.SELECTION,
                     )
                 if target.ref != request.ref:
-                    return self._workspace._failure(
+                    return self._target_failure(
                         "workspace_ref_mismatch",
                         "Selected workspace does not match the requested ref",
-                        kind=FailureKind.SELECTION,
+                        FailureKind.SELECTION,
                     )
             return described
         if request.repository is None:
-            return self._workspace._failure(
+            return self._target_failure(
                 "workspace_target_required",
                 "Either --codespace or --repo is required",
-                kind=FailureKind.USAGE,
+                FailureKind.USAGE,
             )
         return self._workspace.resolve(request.repository, ref=request.ref)
 
