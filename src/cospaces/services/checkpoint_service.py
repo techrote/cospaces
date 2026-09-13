@@ -1,5 +1,6 @@
 """Checkpoint save/show/list/validation orchestration."""
 
+from collections.abc import MutableSequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -131,6 +132,7 @@ class CheckpointService:
             ref = ref if ref is not None else existing.ref
             head = head if head is not None else existing.head
 
+        current_progress: str | None
         if request.current is not None:
             current_progress = request.current
         else:
@@ -204,7 +206,7 @@ class CheckpointService:
 
     @staticmethod
     def _compare(
-        mismatches: list[ContextMismatch],
+        mismatches: MutableSequence[ContextMismatch],
         field: str,
         expected: object,
         actual: object,
@@ -243,7 +245,7 @@ class CheckpointService:
             )
         context = probed.context
         assert context is not None
-        mismatches: list[ContextMismatch] = []
+        mismatches: MutableSequence[ContextMismatch] = []
         self._compare(mismatches, "repository", document.repository, context.repository)
         self._compare(mismatches, "ref", document.ref, context.ref)
         self._compare(mismatches, "head", document.head, context.head)
