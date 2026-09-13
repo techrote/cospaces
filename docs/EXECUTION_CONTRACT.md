@@ -32,8 +32,8 @@ Every implemented tool must expose `--help` and support a JSON mode for operatio
 - human diagnostics belong on stderr;
 - timestamps are UTC ISO 8601 with timezone indication;
 - controller failures produce non-zero process exit status;
-- operation-specific domain failure (for example a remote command returning non-zero) must be represented structurally and also produce an appropriate non-zero controller exit unless an explicit option requests observation-only semantics;
-- do not expose secrets in output.
+- operation-specific domain failure must be represented structurally and also produce an appropriate non-zero controller exit unless an explicit option requests observation-only semantics;
+- do not collect controller secrets/environment material merely for diagnostics.
 
 ## Common result envelope
 
@@ -52,24 +52,7 @@ Target shape:
 }
 ```
 
-On controller/infrastructure failure:
-
-```json
-{
-  "schema": "cospaces.result/v1",
-  "operation": "workspace.ensure",
-  "ok": false,
-  "started_at": "...",
-  "finished_at": "...",
-  "workspace": null,
-  "result": null,
-  "error": {
-    "code": "ambiguous_workspace",
-    "message": "...",
-    "retryable": false
-  }
-}
-```
+On controller/infrastructure failure the envelope has `ok: false` and an error object. Operations such as T2 may still include a partial/failed `result` record when that record is diagnostically meaningful.
 
 The user-facing message may evolve; error `code` values should be treated as compatibility-sensitive once tests use them.
 
@@ -104,32 +87,52 @@ Later explicit operations may add rebuild/delete, but neither should occur impli
 
 Selection precedence for `ensure` should prefer explicit codespace name when supplied, otherwise filter by repository/ref/task metadata according to documented policy. More than one equally valid candidate is an ambiguity error, not permission to choose randomly.
 
-## T2 `run` candidate surface
+## T2 `run`
 
 ```text
 cospaces run --codespace NAME -- command arg1 arg2
-cospaces run --repo owner/repo [selection options] -- command arg1 arg2
+cospaces run --repo owner/repo [--ref BRANCH] -- command arg1 arg2
 cospaces run --codespace NAME --timeout 10m --json -- command arg1
 ```
 
-The parser must preserve the remote command argument boundary after `--`. Implementations may encode the command safely for remote execution, but must not accidentally execute it in the local shell.
+The `--` task boundary is mandatory. T2 preserves caller argv as tokens, quotes each token for the remote POSIX shell, and sends one fixed `set -- ...; "$@"` remote command through `gh codespace ssh`. Caller text is never interpreted by a local shell.
 
-Target run payload:
+Run payload:
 
 ```json
 {
-  "run_id": "uuid-or-equivalent",
+  "run_id": "uuid",
   "command": ["command", "arg1"],
-  "timeout_seconds": 600,
+  "task_id": null,
+  "correlation_id": null,
+  "timeout_seconds": 600.0,
   "exit_code": 0,
   "timed_out": false,
+  "remote_completion": "success",
+  "transport": "gh-codespace-ssh",
   "stdout": "...",
   "stderr": "...",
-  "transport": "gh-codespace-ssh"
+  "stderr_mixed": true,
+  "duration_seconds": 0.42,
+  "started_at": "...",
+  "finished_at": "..."
 }
 ```
 
-If the transport cannot reliably separate remote stderr from transport diagnostics in the initial implementation, document the limitation explicitly rather than pretending separation is exact. Preserve enough raw information to diagnose failure.
+`remote_completion` is `success`, `failed`, `unknown`, or `not_started`. OpenSSH status `255` is classified as transport/ambiguous rather than a trustworthy remote-program status. Timeout also leaves remote completion unknown because terminating the local SSH transport does not prove the remote process ended.
+
+The captured stderr stream may mix remote stderr with SSH/GitHub CLI diagnostics; `stderr_mixed: true` records that limitation explicitly. T2 does not claim byte-perfect provenance for stderr.
+
+Failure categories include:
+- invocation/configuration failure: exit category 2;
+- workspace selection failure: exit category 4;
+- GitHub CLI/SSH transport failure: exit category 3;
+- remote non-zero completion or timeout: exit category 5;
+- remote success: exit 0.
+
+T2 performs no implicit retry. Every invocation gets a unique run ID; caller task/correlation IDs are preserved separately.
+
+T2 does not inspect or serialize controller credential stores or environment variables. It does capture caller-selected task argv/stdout/stderr by design. A caller that executes a secret-printing task can therefore place that task-controlled data in the run record; such commands should not be used when the record will be persisted or shared.
 
 ## T3 `checkpoint` candidate surface
 
@@ -177,7 +180,7 @@ required = true
 
 Exact TOML syntax may be adjusted for a cleaner parser, but commands should prefer arrays over shell strings.
 
-Verification result should contain each check's run record or reference, required/optional status, duration, and aggregate pass/fail.
+Verification result should contain each check's run result or reference, required/optional status, duration, and aggregate pass/fail.
 
 ## Configuration
 
@@ -191,18 +194,16 @@ MVP should keep the schema intentionally small. Unknown keys should either be re
 
 ## Exit-code policy
 
-Define a small stable mapping during foundation implementation. Recommended categories:
-
 - `0`: operation succeeded / verification passed;
 - `2`: invocation/configuration error;
-- `3`: dependency/auth/control-plane unavailable;
+- `3`: dependency/auth/control-plane/transport unavailable;
 - `4`: selection/not-found/ambiguity error;
 - `5`: remote command completed unsuccessfully or timed out;
 - `6`: checkpoint/persistence error;
 - `7`: required verification failed;
 - `1`: unexpected internal failure.
 
-The exact numeric mapping may be changed once before `0.1.0`, but must then be documented and covered by tests.
+The mapping is compatibility-sensitive and covered by tests.
 
 ## Correlation
 
@@ -210,4 +211,4 @@ Every remote run and verification should have a generated ID. If the caller supp
 
 ## Logging
 
-Human logs may be verbose with an explicit flag. Machine JSON must stay parseable. Redact values that resemble known credential channels; more importantly, avoid collecting sensitive environment/configuration in the first place.
+Human logs may be verbose with an explicit flag. Machine JSON must stay parseable. Avoid collecting sensitive controller environment/configuration in the first place.
