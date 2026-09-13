@@ -191,7 +191,11 @@ class WorkspaceService:
                     kind=FailureKind.SELECTION,
                 )
             if ref is not None and workspace.ref != ref:
-                code = "workspace_ref_unknown" if workspace.ref is None else "workspace_ref_mismatch"
+                code = (
+                    "workspace_ref_unknown"
+                    if workspace.ref is None
+                    else "workspace_ref_mismatch"
+                )
                 return self._failure(
                     code,
                     "Selected workspace does not match the requested ref",
