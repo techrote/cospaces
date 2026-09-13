@@ -137,11 +137,13 @@ class VerificationService:
         context = self._repository_context()
         provenance_repository = request.repository
         provenance_ref = request.ref
-        head = (
-            context.head
-            if self._head_matches_workspace(context, request.repository, request.ref)
-            else None
-        )
+        head: str | None = None
+        if context is not None and self._head_matches_workspace(
+            context,
+            request.repository,
+            request.ref,
+        ):
+            head = context.head
 
         selected_codespace = request.codespace
         workspace_payload: Mapping[str, object] | None = None
