@@ -216,9 +216,7 @@ class VerificationService:
             checks=check_records,
         )
         if not passed:
-            failed_count = sum(
-                1 for check in check_records if check.required and not check.passed
-            )
+            failed_count = sum(1 for check in check_records if check.required and not check.passed)
             return VerificationActionResult(
                 record=record,
                 failure=DomainFailure(
