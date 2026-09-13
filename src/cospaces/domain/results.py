@@ -1,9 +1,9 @@
 """Machine-readable result envelope helpers."""
 
+import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
-import json
 from typing import Any
 
 from .contracts import DomainFailure
@@ -31,7 +31,6 @@ class ResultEnvelope:
         if self.error is not None:
             error_payload = {
                 "code": self.error.code,
-                "kind": self.error.kind.value,
                 "message": self.error.message,
                 "retryable": self.error.retryable,
             }
