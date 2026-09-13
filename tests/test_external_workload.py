@@ -8,7 +8,10 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "tools" / "external_workload.py"
 
 
-def run_tool(*arguments: str, extra_env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+def run_tool(
+    *arguments: str,
+    extra_env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     if extra_env:
         env.update(extra_env)
