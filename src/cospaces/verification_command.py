@@ -16,7 +16,7 @@ _VERIFY_CWD_SCRIPT = (
     f'root_real=$(cd "$root" 2>/dev/null && pwd -P) || {{ {_ROOT_FAILURE}; }}; '
     f'target_real=$(cd "$root/$1" 2>/dev/null && pwd -P) || {{ {_CWD_FAILURE}; }}; '
     f'case "$target_real" in "$root_real"|"$root_real"/*) ;; *) '
-    f'{_ESCAPE_FAILURE} ;; esac; '
+    f"{_ESCAPE_FAILURE} ;; esac; "
     f'cd "$target_real" || {{ {_CWD_FAILURE}; }}; '
     'shift; exec "$@"'
 )
