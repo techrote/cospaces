@@ -3,6 +3,7 @@
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 SCHEMA = "cospaces.checkpoint/v1"
@@ -87,3 +88,133 @@ class CheckpointDocument:
             "records": self.records.to_dict(),
             "notes": self.notes,
         }
+
+
+def _bounded_text(value: Any, label: str, limit: int, *, allow_none: bool = True) -> str | None:
+    if value is None and allow_none:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(f"{label} must be a string")
+    if len(value) > limit:
+        raise ValueError(f"{label} exceeds {limit} characters")
+    return value
+
+
+def _timestamp(value: Any, label: str) -> str:
+    text = _bounded_text(value, label, 64, allow_none=False)
+    assert text is not None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError(f"{label} must be ISO-8601") from exc
+    if parsed.tzinfo is None:
+        raise ValueError(f"{label} must include a timezone")
+    return text
+
+
+def _string_tuple(value: Any, label: str) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        raise ValueError(f"{label} must be a list")
+    if len(value) > MAX_ITEMS:
+        raise ValueError(f"{label} exceeds {MAX_ITEMS} items")
+    items: list[str] = []
+    for item in value:
+        text = _bounded_text(item, f"{label} item", MAX_ITEM_CHARS, allow_none=False)
+        assert text is not None
+        items.append(text)
+    return tuple(items)
+
+
+def _workspace(value: Any) -> Mapping[str, object] | None:
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise ValueError("workspace must be an object or null")
+    unknown = set(value) - _WORKSPACE_KEYS
+    if unknown:
+        raise ValueError(f"workspace contains unsupported keys: {sorted(unknown)}")
+    result: dict[str, object] = {}
+    for key in sorted(_WORKSPACE_KEYS):
+        item = value.get(key)
+        if item is not None and not isinstance(item, str):
+            raise ValueError(f"workspace.{key} must be a string or null")
+        if isinstance(item, str) and len(item) > MAX_ITEM_CHARS:
+            raise ValueError(f"workspace.{key} exceeds {MAX_ITEM_CHARS} characters")
+        result[key] = item
+    if not isinstance(result.get("name"), str) or not result["name"]:
+        raise ValueError("workspace.name is required when workspace is present")
+    return result
+
+
+def checkpoint_from_dict(payload: Mapping[str, Any]) -> CheckpointDocument:
+    schema = payload.get("schema")
+    if schema != SCHEMA:
+        raise ValueError(f"unsupported checkpoint schema: {schema!r}")
+
+    raw_task = payload.get("task_id")
+    if not isinstance(raw_task, str):
+        raise ValueError("task_id must be a string")
+    task_id = validate_task_id(raw_task)
+    created_at = _timestamp(payload.get("created_at"), "created_at")
+    updated_at = _timestamp(payload.get("updated_at"), "updated_at")
+
+    working_payload = payload.get("working_tree")
+    working_tree: WorkingTreeState | None = None
+    if working_payload is not None:
+        if not isinstance(working_payload, Mapping):
+            raise ValueError("working_tree must be an object or null")
+        if set(working_payload) - {"dirty", "summary"}:
+            raise ValueError("working_tree contains unsupported keys")
+        dirty = working_payload.get("dirty")
+        if not isinstance(dirty, bool):
+            raise ValueError("working_tree.dirty must be a boolean")
+        summary = _bounded_text(
+            working_payload.get("summary"),
+            "working_tree.summary",
+            MAX_PROGRESS_CHARS,
+            allow_none=False,
+        )
+        assert summary is not None
+        working_tree = WorkingTreeState(dirty=dirty, summary=summary)
+
+    progress_payload = payload.get("progress")
+    if not isinstance(progress_payload, Mapping):
+        raise ValueError("progress must be an object")
+    if set(progress_payload) - {"completed", "current", "next"}:
+        raise ValueError("progress contains unsupported keys")
+    completed = _string_tuple(progress_payload.get("completed", []), "progress.completed")
+    current = _bounded_text(progress_payload.get("current"), "progress.current", MAX_PROGRESS_CHARS)
+    next_step = _bounded_text(progress_payload.get("next"), "progress.next", MAX_PROGRESS_CHARS)
+
+    records_payload = payload.get("records")
+    if not isinstance(records_payload, Mapping):
+        raise ValueError("records must be an object")
+    if set(records_payload) - {"last_run_id", "last_verification_id", "paths"}:
+        raise ValueError("records contains unsupported keys")
+    last_run_id = _bounded_text(records_payload.get("last_run_id"), "records.last_run_id", MAX_ITEM_CHARS)
+    last_verification_id = _bounded_text(
+        records_payload.get("last_verification_id"),
+        "records.last_verification_id",
+        MAX_ITEM_CHARS,
+    )
+    paths = _string_tuple(records_payload.get("paths", []), "records.paths")
+
+    notes = _bounded_text(payload.get("notes", ""), "notes", MAX_NOTE_CHARS, allow_none=False)
+    assert notes is not None
+    return CheckpointDocument(
+        task_id=task_id,
+        created_at=created_at,
+        updated_at=updated_at,
+        repository=_bounded_text(payload.get("repository"), "repository", MAX_ITEM_CHARS),
+        ref=_bounded_text(payload.get("ref"), "ref", MAX_ITEM_CHARS),
+        head=_bounded_text(payload.get("head"), "head", MAX_ITEM_CHARS),
+        workspace=_workspace(payload.get("workspace")),
+        working_tree=working_tree,
+        progress=ProgressState(completed=completed, current=current, next_step=next_step),
+        records=RecordReferences(
+            last_run_id=last_run_id,
+            last_verification_id=last_verification_id,
+            paths=paths,
+        ),
+        notes=notes,
+    )
