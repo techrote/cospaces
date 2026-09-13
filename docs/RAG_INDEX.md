@@ -13,7 +13,8 @@ When instructions conflict, use this order unless a newer decision explicitly su
 5. `docs/DEVELOPMENT_WORKFLOW.md`, for implementation, verification, PR, merge, and reconciliation procedure.
 6. `docs/TOOL_CATALOG.md`, for tool responsibilities and non-goals.
 7. `docs/ROADMAP.md`, for sequencing and dependency intent.
-8. `README.md`, for orientation only.
+8. `docs/ISSUE_ATLAS.md`, for issue-number navigation only.
+9. `README.md`, for orientation only.
 
 If ambiguity remains and safe progress is possible, choose the smallest reversible implementation consistent with the higher-authority documents and record the decision in the PR. Do not broaden scope merely because adjacent functionality is attractive.
 
@@ -27,7 +28,9 @@ Read:
 - `docs/ARCHITECTURE.md`;
 - `docs/EXECUTION_CONTRACT.md`;
 - `docs/DEVELOPMENT_WORKFLOW.md`;
+- `docs/AUTONOMOUS_ISSUE_PROMPT.md`;
 - `docs/DECISIONS.md`;
+- `docs/ISSUE_ATLAS.md` for current dependency/issue navigation;
 - the relevant tool section in `docs/TOOL_CATALOG.md`;
 - the relevant phase/dependency section in `docs/ROADMAP.md`.
 
@@ -44,8 +47,8 @@ Also read `docs/VERIFICATION_EVIDENCE.md`.
 
 - **controller**: the local/client-side `cospaces` process invoking GitHub CLI and coordinating operations.
 - **workspace**: a GitHub Codespace selected for a repository/ref/task.
-- **remote command**: a non-interactive command executed inside the workspace.
-- **run result**: the structured record of one remote command attempt.
+- **remote command**: a non-interactive task executed inside the workspace.
+- **run result**: the structured record of one remote task attempt.
 - **checkpoint**: durable task state sufficient for a later agent/session to continue intentionally.
 - **verification plan**: repository-declared checks whose results can be represented structurally.
 - **evidence bundle**: a provenance-bearing set of logs/results/artifacts for a run or verification.
