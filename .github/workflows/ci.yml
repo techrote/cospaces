@@ -27,6 +27,10 @@ jobs:
         run: python -m mypy src/cospaces
       - name: Unit tests
         run: python -m pytest
+      - name: Phase 1 hardening suite
+        run: python tools/hardening_smoke.py --json
+      - name: Live harness import smoke
+        run: python tools/live_codespace_smoke.py --help
       - name: Build package
         run: python -m build
       - name: Module CLI smoke

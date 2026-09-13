@@ -31,6 +31,7 @@ jobs:
               'docs/EXECUTION_CONTRACT.md',
               'docs/CHECKPOINT_RESUME.md',
               'docs/VERIFICATION_EVIDENCE.md',
+              'docs/HARDENING.md',
               'docs/DEVELOPMENT_WORKFLOW.md',
               'docs/AUTONOMOUS_ISSUE_PROMPT.md',
               'docs/ISSUE_ATLAS.md',
