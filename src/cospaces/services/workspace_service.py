@@ -1,13 +1,14 @@
 """Workspace service module."""
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
 from cospaces.adapters.github_cli import GitHubCliAdapter
 from cospaces.adapters.process import CommandResult
 from cospaces.domain.contracts import DomainFailure, FailureKind
-from cospaces.domain.workspace import WorkspaceIdentity
+from cospaces.domain.workspace import WorkspaceIdentity, workspace_from_payload
 
 _JSON_FIELDS = "name,repository,gitStatus,state,displayName,machineName"
 
@@ -91,3 +92,69 @@ class WorkspaceService:
             return json.loads(result.stdout)
         except (json.JSONDecodeError, TypeError):
             return None
+
+    def list(self, repository: str) -> WorkspaceActionResult:
+        result, failure = self._capture(
+            (
+                "codespace",
+                "list",
+                "--repo",
+                repository,
+                "--limit",
+                "1000",
+                "--json",
+                _JSON_FIELDS,
+            )
+        )
+        if failure is not None:
+            return WorkspaceActionResult(failure=failure)
+        assert result is not None
+        payload = self._decode(result)
+        if not isinstance(payload, list):
+            return self._failure(
+                "invalid_github_response",
+                "GitHub CLI returned malformed Codespaces JSON",
+            )
+        workspaces: list[WorkspaceIdentity] = []
+        for item in payload:
+            if not isinstance(item, Mapping):
+                return self._failure(
+                    "invalid_github_response",
+                    "GitHub CLI returned malformed workspace data",
+                )
+            workspace = workspace_from_payload(item)
+            if workspace is None:
+                return self._failure(
+                    "invalid_github_response",
+                    "GitHub CLI workspace data has no valid name",
+                )
+            workspaces.append(workspace)
+        return WorkspaceActionResult(workspaces=tuple(workspaces))
+
+    def describe(self, name: str) -> WorkspaceActionResult:
+        result, failure = self._capture(
+            (
+                "codespace",
+                "view",
+                "--codespace",
+                name,
+                "--json",
+                _JSON_FIELDS,
+            )
+        )
+        if failure is not None:
+            return WorkspaceActionResult(failure=failure)
+        assert result is not None
+        payload = self._decode(result)
+        if not isinstance(payload, Mapping):
+            return self._failure(
+                "invalid_github_response",
+                "GitHub CLI returned malformed Codespace JSON",
+            )
+        workspace = workspace_from_payload(payload)
+        if workspace is None:
+            return self._failure(
+                "invalid_github_response",
+                "GitHub CLI Codespace data has no valid name",
+            )
+        return WorkspaceActionResult(workspace=workspace)
