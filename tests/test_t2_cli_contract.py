@@ -72,3 +72,44 @@ def test_parser_preserves_explicit_task_boundary_and_arguments() -> None:
     )
 
     assert namespace.remote_argv == ["--", "printf", "%s", "a b", "--literal"]
+
+
+def test_run_json_is_one_document_and_metadata_is_preserved(capsys) -> None:
+    namespace = build_parser().parse_args(
+        [
+            "run",
+            "--codespace",
+            "space-one",
+            "--timeout",
+            "10m",
+            "--task-id",
+            "issue-3",
+            "--correlation-id",
+            "chat-1",
+            "--json",
+            "--",
+            "printf",
+            "%s",
+            "a b",
+        ]
+    )
+    service = FakeRunService()
+
+    status = run_remote(namespace, service)  # type: ignore[arg-type]
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert status == 0
+    assert captured.err == ""
+    assert service.request is not None
+    assert service.request.argv == ("printf", "%s", "a b")
+    assert service.request.timeout_seconds == 600.0
+    assert service.request.task_id == "issue-3"
+    assert service.request.correlation_id == "chat-1"
+    assert payload["schema"] == "cospaces.result/v1"
+    assert payload["operation"] == "run"
+    assert payload["ok"] is True
+    assert payload["workspace"]["name"] == "space-one"
+    assert payload["result"]["run_id"] == "11111111-1111-4111-8111-111111111111"
+    assert payload["result"]["command"] == ["printf", "%s", "a b"]
+    assert payload["result"]["transport"] == "gh-codespace-ssh"
