@@ -110,9 +110,20 @@ def main() -> int:
         return emit(args, task_id, steps, saved.failure)
 
     shown = checkpoint_service.show(task_id)
-    validated = checkpoint_service.validate(task_id)
     steps.append({"step": "checkpoint.show", "ok": shown.ok})
+    if not shown.ok:
+        if not args.keep_checkpoint:
+            cleanup_checkpoint(checkpoint_root, task_id)
+        assert shown.failure is not None
+        return emit(args, task_id, steps, shown.failure)
+
+    validated = checkpoint_service.validate(task_id)
     steps.append({"step": "checkpoint.validate", "ok": validated.ok})
+    if not validated.ok:
+        if not args.keep_checkpoint:
+            cleanup_checkpoint(checkpoint_root, task_id)
+        assert validated.failure is not None
+        return emit(args, task_id, steps, validated.failure)
 
     if not args.keep_checkpoint:
         cleanup_checkpoint(checkpoint_root, task_id)
