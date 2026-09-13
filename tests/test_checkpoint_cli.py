@@ -62,3 +62,49 @@ def test_checkpoint_save_show_list_validate_json_contract(tmp_path, capsys) -> N
     assert validate_payload["operation"] == "checkpoint.validate"
     assert validate_payload["result"]["live_checked"] is False
     assert validate_payload["result"]["mismatches"] == []
+
+
+def test_invalid_task_id_is_structured_usage_failure(tmp_path, capsys) -> None:
+    status = main(
+        [
+            "checkpoint",
+            "show",
+            "--task",
+            "../escape",
+            "--root",
+            str(tmp_path),
+            "--json",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert status == 2
+    assert captured.err == ""
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "invalid_task_id"
+
+
+def test_malformed_checkpoint_is_structured_persistence_failure(tmp_path, capsys) -> None:
+    directory = tmp_path / ".cospaces" / "checkpoints"
+    directory.mkdir(parents=True)
+    (directory / "issue-4.json").write_text("{broken", encoding="utf-8")
+
+    status = main(
+        [
+            "checkpoint",
+            "validate",
+            "--task",
+            "issue-4",
+            "--root",
+            str(tmp_path),
+            "--json",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert status == 6
+    assert captured.err == ""
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "checkpoint_malformed"
