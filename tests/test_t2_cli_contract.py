@@ -116,9 +116,7 @@ def test_run_json_is_one_document_and_metadata_is_preserved(capsys) -> None:
 
 
 def test_missing_double_dash_fails_before_workspace_lookup(capsys) -> None:
-    status = main(
-        ["run", "--codespace", "space-one", "--json", "printf", "hello"]
-    )
+    status = main(["run", "--codespace", "space-one", "--json", "printf", "hello"])
 
     captured = capsys.readouterr()
     payload = json.loads(captured.out)
