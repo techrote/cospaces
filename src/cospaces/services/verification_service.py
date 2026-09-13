@@ -106,6 +106,18 @@ class VerificationService:
             checks=tuple(checks),
         )
 
+    @staticmethod
+    def _head_matches_workspace(
+        context: RepositoryContext | None,
+        repository: str | None,
+        ref: str | None,
+    ) -> bool:
+        if context is None:
+            return False
+        repository_matches = repository is None or repository == context.repository
+        ref_matches = ref is None or ref == context.ref
+        return repository_matches and ref_matches
+
     def verify(self, request: VerificationRequest) -> VerificationActionResult:
         loaded = load_verification_plan(self.root, request.plan)
         if not loaded.ok:
@@ -125,14 +137,15 @@ class VerificationService:
         verification_id = str(uuid4())
         started_at = utc_now()
         context = self._repository_context()
-        repository = request.repository or (context.repository if context is not None else None)
-        ref = request.ref or (context.ref if context is not None else None)
-        head: str | None = None
-        if context is not None:
-            repository_matches = request.repository is None or request.repository == context.repository
-            ref_matches = request.ref is None or request.ref == context.ref
-            if repository_matches and ref_matches:
-                head = context.head
+        provenance_repository = request.repository or (
+            context.repository if context is not None else None
+        )
+        provenance_ref = request.ref or (context.ref if context is not None else None)
+        head = (
+            context.head
+            if self._head_matches_workspace(context, request.repository, request.ref)
+            else None
+        )
 
         selected_codespace = request.codespace
         workspace_payload: Mapping[str, object] | None = None
@@ -144,8 +157,8 @@ class VerificationService:
                 RunRequest(
                     argv=build_check_argv(check),
                     codespace=selected_codespace,
-                    repository=repository,
-                    ref=ref,
+                    repository=request.repository,
+                    ref=request.ref,
                     timeout_seconds=check.timeout_seconds,
                     task_id=request.task_id,
                     correlation_id=verification_id,
@@ -158,18 +171,24 @@ class VerificationService:
                 if selected_codespace is None:
                     selected_codespace = run_result.workspace.name
                 workspace_payload = run_result.workspace.to_dict()
-                if repository is None:
-                    repository = run_result.workspace.repository
-                if ref is None:
-                    ref = run_result.workspace.ref
+                if run_result.workspace.repository is not None:
+                    provenance_repository = run_result.workspace.repository
+                if run_result.workspace.ref is not None:
+                    provenance_ref = run_result.workspace.ref
+                if not self._head_matches_workspace(
+                    context,
+                    run_result.workspace.repository,
+                    run_result.workspace.ref,
+                ):
+                    head = None
 
             if run_result.failure is not None:
                 if run_result.failure.kind is not FailureKind.REMOTE:
                     record = self._record(
                         verification_id=verification_id,
                         request=request,
-                        repository=repository,
-                        ref=ref,
+                        repository=provenance_repository,
+                        ref=provenance_ref,
                         head=head,
                         workspace=workspace_payload,
                         started_at=started_at,
@@ -188,8 +207,8 @@ class VerificationService:
         record = self._record(
             verification_id=verification_id,
             request=request,
-            repository=repository,
-            ref=ref,
+            repository=provenance_repository,
+            ref=provenance_ref,
             head=head,
             workspace=workspace_payload,
             started_at=started_at,
