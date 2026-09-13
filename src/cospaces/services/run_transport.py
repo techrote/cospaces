@@ -31,7 +31,7 @@ def parse_gh_version(text: str) -> tuple[int, int, int] | None:
     match = _VERSION_RE.search(text)
     if match is None:
         return None
-    return tuple(int(part) for part in match.groups())  # type: ignore[return-value]
+    return int(match.group(1)), int(match.group(2)), int(match.group(3))
 
 
 class CodespaceSshTransport:
@@ -96,6 +96,8 @@ class CodespaceSshTransport:
                     "--codespace",
                     codespace,
                     "--",
+                    "-T",
+                    "-oBatchMode=yes",
                     encoded,
                 ),
                 timeout_seconds=timeout_seconds,
