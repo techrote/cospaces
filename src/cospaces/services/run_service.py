@@ -8,8 +8,14 @@ from cospaces.domain.contracts import DomainFailure, FailureKind
 from cospaces.domain.results import utc_now
 from cospaces.domain.run import RunRecord, RunRequest
 from cospaces.domain.workspace import WorkspaceIdentity
-from cospaces.services.run_transport import CodespaceSshTransport, TRANSPORT_NAME
-from cospaces.services.workspace_service import WorkspaceActionResult, WorkspaceService
+from cospaces.services.run_transport import (
+    TRANSPORT_NAME,
+    CodespaceSshTransport,
+)
+from cospaces.services.workspace_service import (
+    WorkspaceActionResult,
+    WorkspaceService,
+)
 
 
 @dataclass(frozen=True)
