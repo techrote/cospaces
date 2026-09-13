@@ -7,9 +7,7 @@ from cospaces.adapters.process import CommandResult, ProcessAdapter
 
 class FakeProcess(ProcessAdapter):
     def __init__(self) -> None:
-        self.calls: list[
-            tuple[tuple[str, ...], Mapping[str, str] | None, float | None]
-        ] = []
+        self.calls: list[tuple[tuple[str, ...], Mapping[str, str] | None, float | None]] = []
 
     def capture(
         self,
@@ -70,7 +68,5 @@ def test_github_cli_adapter_disables_prompts_and_forwards_timeout() -> None:
 
     result = adapter.capture(("codespace", "list"), timeout_seconds=3.0)
 
-    assert fake.calls == [
-        (("gh", "codespace", "list"), {"GH_PROMPT_DISABLED": "1"}, 3.0)
-    ]
+    assert fake.calls == [(("gh", "codespace", "list"), {"GH_PROMPT_DISABLED": "1"}, 3.0)]
     assert result.stdout == "ok"
