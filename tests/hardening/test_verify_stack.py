@@ -73,3 +73,49 @@ def write_plan(root: Path) -> None:
         '[[verify.default.checks]]\nname = "second"\ncommand = ["example-two"]\n',
         encoding="utf-8",
     )
+
+
+def run_stack(root: Path, runner: FakeRunService, capsys) -> tuple[int, dict[str, object]]:
+    namespace = build_parser().parse_args(
+        ["verify", "default", "--codespace", "space-one", "--root", str(root), "--json"]
+    )
+    service = VerificationService(root, run_service=runner)  # type: ignore[arg-type]
+    status = run_verify(namespace, service)
+    captured = capsys.readouterr()
+    assert captured.err == ""
+    return status, json.loads(captured.out)
+
+
+def test_verify_pass_uses_real_parser_config_service_and_output(tmp_path: Path, capsys) -> None:
+    write_plan(tmp_path)
+    runner = FakeRunService([run_result("run-a"), run_result("run-b")])
+
+    status, payload = run_stack(tmp_path, runner, capsys)
+
+    assert status == 0
+    assert payload["schema"] == "cospaces.result/v1"
+    assert payload["operation"] == "verify"
+    assert payload["ok"] is True
+    result = payload["result"]
+    assert isinstance(result, dict)
+    assert result["schema"] == "cospaces.verify/v1"
+    assert result["passed"] is True
+    assert [item["run_id"] for item in result["checks"]] == ["run-a", "run-b"]
+    assert len(runner.requests) == 2
+
+
+def test_verify_required_failure_is_exit_seven_and_keeps_later_check(tmp_path: Path, capsys) -> None:
+    write_plan(tmp_path)
+    runner = FakeRunService([run_result("run-a", failed=True), run_result("run-b")])
+
+    status, payload = run_stack(tmp_path, runner, capsys)
+
+    assert status == 7
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "verification_failed"
+    result = payload["result"]
+    assert isinstance(result, dict)
+    assert result["complete"] is True
+    assert result["passed"] is False
+    assert len(result["checks"]) == 2
+    assert len(runner.requests) == 2
