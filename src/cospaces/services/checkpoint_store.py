@@ -7,7 +7,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from cospaces.domain.checkpoint import SCHEMA, CheckpointDocument, checkpoint_from_dict, validate_task_id
+from cospaces.domain.checkpoint import (
+    SCHEMA,
+    CheckpointDocument,
+    checkpoint_from_dict,
+    validate_task_id,
+)
 from cospaces.domain.contracts import DomainFailure, FailureKind
 
 
@@ -178,7 +183,11 @@ class CheckpointStore:
         if path.exists():
             current = self._read_path(path, expected_task=document.task_id)
             if not current.ok:
-                return CheckpointSaveResult(path=path, previous_path=previous, failure=current.failure)
+                return CheckpointSaveResult(
+                    path=path,
+                    previous_path=previous,
+                    failure=current.failure,
+                )
             assert current.document is not None
             backup_failure = self._atomic_write(previous, self._serialized(current.document))
             if backup_failure is not None:
