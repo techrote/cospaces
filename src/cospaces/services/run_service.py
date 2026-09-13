@@ -1,5 +1,6 @@
 """Remote run orchestration using deterministic workspace targeting."""
 
+import math
 import time
 from dataclasses import dataclass
 from uuid import uuid4
@@ -111,11 +112,11 @@ class RunService:
         run_id = str(uuid4())
         started_at = utc_now()
         started_clock = time.monotonic()
-        if request.timeout_seconds <= 0:
+        if not math.isfinite(request.timeout_seconds) or request.timeout_seconds <= 0:
             failure = DomainFailure(
                 code="invalid_timeout",
                 kind=FailureKind.USAGE,
-                message="Timeout must be greater than zero",
+                message="Timeout must be finite and greater than zero",
             )
             return RunActionResult(
                 record=self._record(
@@ -131,6 +132,21 @@ class RunService:
                 code="remote_argv_required",
                 kind=FailureKind.USAGE,
                 message="A remote executable and arguments are required after --",
+            )
+            return RunActionResult(
+                record=self._record(
+                    run_id=run_id,
+                    request=request,
+                    started_at=started_at,
+                    started_clock=started_clock,
+                ),
+                failure=failure,
+            )
+        if any("\x00" in item for item in request.argv):
+            failure = DomainFailure(
+                code="invalid_remote_argv",
+                kind=FailureKind.USAGE,
+                message="Remote argv cannot contain NUL characters",
             )
             return RunActionResult(
                 record=self._record(
