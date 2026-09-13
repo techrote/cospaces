@@ -29,3 +29,47 @@ def target() -> WorkspaceIdentity:
         display_name="space-one",
         machine="standard",
     )
+
+
+def run_result(run_id: str, *, failed: bool = False) -> RunActionResult:
+    failure = None
+    exit_code = 0
+    completion = "success"
+    if failed:
+        failure = DomainFailure(
+            code="remote_task_failed",
+            kind=FailureKind.REMOTE,
+            message="declared check failed",
+        )
+        exit_code = 9
+        completion = "failed"
+    return RunActionResult(
+        workspace=target(),
+        record=RunRecord(
+            run_id=run_id,
+            argv=("example",),
+            task_id="issue-18",
+            correlation_id="verification",
+            timeout_seconds=60.0,
+            exit_code=exit_code,
+            timed_out=False,
+            remote_completion=completion,
+            transport="gh-codespace-ssh",
+            stdout="",
+            stderr="",
+            stderr_mixed=True,
+            duration_seconds=0.01,
+            started_at="2026-09-13T20:00:00Z",
+            finished_at="2026-09-13T20:00:00.010000Z",
+        ),
+        failure=failure,
+    )
+
+
+def write_plan(root: Path) -> None:
+    (root / ".cospaces.toml").write_text(
+        "[verify.default]\n"
+        '[[verify.default.checks]]\nname = "first"\ncommand = ["example-one"]\n'
+        '[[verify.default.checks]]\nname = "second"\ncommand = ["example-two"]\n',
+        encoding="utf-8",
+    )
