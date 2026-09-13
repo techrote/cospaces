@@ -1,5 +1,7 @@
 """CLI surface for the workspace tool."""
 
+from __future__ import annotations
+
 import argparse
 
 
