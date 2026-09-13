@@ -93,9 +93,7 @@ def test_resolve_unknown_candidate_ref_is_not_guessed() -> None:
 
 
 def test_resolve_multiple_candidates_is_ambiguous() -> None:
-    service = WorkspaceService(
-        FakeGitHub([result([workspace("one"), workspace("two")])])
-    )
+    service = WorkspaceService(FakeGitHub([result([workspace("one"), workspace("two")])]))
 
     resolved = service.resolve("owner/repo")
 
