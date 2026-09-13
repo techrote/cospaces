@@ -18,7 +18,7 @@ def main() -> int:
     parser.add_argument("--json", action="store_true", dest="json_output")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
-    command = (sys.executable, "-m", "pytest", "-q", "tests/hardening")
+    command = (sys.executable, "-m", "pytest", "-q", "tests")
     started = time.monotonic()
     completed = subprocess.run(
         command,
