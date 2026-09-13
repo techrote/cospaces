@@ -1,0 +1,1 @@
+"""Workspace output module."""
