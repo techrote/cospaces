@@ -158,3 +158,57 @@ class WorkspaceService:
                 "GitHub CLI Codespace data has no valid name",
             )
         return WorkspaceActionResult(workspace=workspace)
+
+    def resolve(
+        self,
+        repository: str,
+        *,
+        ref: str | None = None,
+        name: str | None = None,
+    ) -> WorkspaceActionResult:
+        if name is not None:
+            described = self.describe(name)
+            if not described.ok:
+                return described
+            workspace = described.workspace
+            assert workspace is not None
+            if workspace.repository is None:
+                return self._failure(
+                    "workspace_repository_unknown",
+                    "Cannot verify the selected workspace repository",
+                    kind=FailureKind.SELECTION,
+                )
+            if workspace.repository.casefold() != repository.casefold():
+                return self._failure(
+                    "workspace_repository_mismatch",
+                    "Selected workspace belongs to a different repository",
+                    kind=FailureKind.SELECTION,
+                )
+            if ref is not None and workspace.ref != ref:
+                code = "workspace_ref_unknown" if workspace.ref is None else "workspace_ref_mismatch"
+                return self._failure(
+                    code,
+                    "Selected workspace does not match the requested ref",
+                    kind=FailureKind.SELECTION,
+                )
+            return described
+
+        listed = self.list(repository)
+        if not listed.ok:
+            return listed
+        candidates = list(listed.workspaces)
+        if ref is not None:
+            candidates = [workspace for workspace in candidates if workspace.ref == ref]
+        if not candidates:
+            return self._failure(
+                "workspace_not_found",
+                "No matching Codespace was found",
+                kind=FailureKind.SELECTION,
+            )
+        if len(candidates) > 1:
+            return self._failure(
+                "ambiguous_workspace",
+                "More than one matching Codespace was found",
+                kind=FailureKind.SELECTION,
+            )
+        return WorkspaceActionResult(workspace=candidates[0])
