@@ -5,24 +5,26 @@ The programme defines eight composable utilities. They may share one `cospaces` 
 ## T1 — `workspace` — MVP
 
 ### Purpose
-Resolve, inspect, create, start/reuse, stop, and explicitly manage the Codespace intended for a task.
+Resolve, inspect, create/reuse, stop, and explicitly manage the Codespace intended for a task.
 
 ### Required v0.1 capabilities
 - list/describe accessible Codespaces for a repository;
 - deterministic non-interactive selection;
-- `ensure` semantics: reuse an unambiguous suitable workspace or create one when creation is explicitly allowed;
+- `ensure` semantics: reuse a provably unambiguous suitable workspace or create one when creation is explicitly allowed;
 - explicit create options for repository/ref and supported machine/devcontainer/lifecycle settings;
 - stop a selected workspace;
 - expose JSON workspace identity/state;
-- fail safely on ambiguity.
+- fail safely on ambiguity or incomplete metadata that prevents proving uniqueness;
+- bound controller-side GitHub Codespaces operations so a stalled `gh` call cannot wait forever.
 
 ### Safety rules
 - deletion/rebuild may be exposed only as explicit operations, never as automatic recovery;
 - do not force-delete work by default;
-- do not silently switch to a workspace for a different repository/ref because the preferred one is unavailable.
+- do not silently switch to a workspace for a different repository/ref because the preferred one is unavailable;
+- do not treat a known ref match as unique while another candidate has unknown ref metadata and could also match.
 
 ### Non-goals
-Scheduling, fleet scaling, billing optimisation, prebuild management.
+Scheduling, fleet scaling, billing optimisation, prebuild management, or a dedicated “start” operation. A later SSH/run connection may cause GitHub to start a stopped Codespace; that behavior is distinct from T1 exposing an explicit start command.
 
 ## T2 — `run` — MVP
 
@@ -32,16 +34,21 @@ Execute one non-interactive command inside exactly one resolved Codespace and re
 ### Required v0.1 capabilities
 - explicit workspace target or deterministic resolution through T1;
 - remote execution via supported transport (`gh codespace ssh` initially);
-- command timeout;
+- finite positive command timeout;
 - capture exit outcome and output;
 - distinguish remote program non-zero exit from controller/transport failure;
 - JSON result mode;
-- optional run metadata such as task ID/correlation ID.
+- optional run metadata such as task ID/correlation ID;
+- reject malformed argv/timeout before workspace or transport work.
 
 ### Safety rules
 - no local shell interpolation of caller-provided remote command;
 - no automatic retry of commands that may have side effects unless the retry is explicitly requested/idempotent;
-- redact obvious authentication material from controller diagnostics.
+- redact obvious authentication material from controller diagnostics;
+- do not claim that controller timeout proves remote termination.
+
+### Known v0.1 limitation
+The current process adapter captures stdout/stderr in memory without an output-size bound. Process/output resource hardening is tracked separately; truncating data only after unbounded capture would not solve the underlying problem.
 
 ### Non-goals
 Persistent interactive terminals, PTY emulation, general SSH replacement.
@@ -54,7 +61,7 @@ Persist task continuation state so a stopped Codespace, lost controller process,
 ### Required v0.1 capabilities
 - create/update checkpoint for a task ID;
 - show/list checkpoints;
-- validate schema/version;
+- validate schema/version and reject unknown v1 fields rather than silently discarding them;
 - record repository/ref/HEAD, workspace identity, dirty-state summary, completed/current/next step, relevant result/evidence paths, and timestamps;
 - atomic writes where practical;
 - machine-readable output;
@@ -75,16 +82,21 @@ Execute repository-declared checks as an explicit acceptance operation and emit 
 
 ### Required v0.1 capabilities
 - define a small verification-plan schema in `.cospaces.toml` or an associated repository file;
-- named checks with command, timeout, and required/optional semantics;
+- named checks with command, finite timeout, and required/optional semantics;
 - sequential execution in MVP unless there is a compelling simpler design;
-- preserve each check's run result;
+- run each check from a physically contained path beneath the Codespace repository root;
+- preserve each check's run reference and bounded outcome metadata;
 - aggregate overall status;
-- JSON report written to stdout and optionally to a file;
-- non-zero process status when required verification fails.
+- JSON report written to stdout;
+- non-zero process status when required verification fails;
+- keep environment/setup failure distinct from a repository check assertion failure;
+- leave remote commit SHA unknown unless it is actually observed in the Codespace.
 
 ### Safety rules
 - configuration is repository-controlled executable intent: show what is being run and do not silently add commands;
-- optional checks must be visibly optional, not silently ignored failures.
+- optional checks must be visibly optional, not silently ignored failures;
+- repository-relative paths must not escape the checkout through symlinks;
+- never substitute controller-local Git provenance for unobserved remote provenance.
 
 ### Non-goals
 General CI replacement, code-review judgement, flaky-test prediction.
@@ -129,7 +141,7 @@ Create a provenance-bearing evidence bundle for a task/run/verification.
 
 Candidate contents:
 - manifest with schema version;
-- repository/ref/commit/workspace identity;
+- repository/ref/commit/workspace identity where actually observed;
 - timestamps and controller version;
 - run/verification JSON records;
 - selected logs/artifacts;
@@ -173,4 +185,4 @@ run/checkpoint/verify may all contribute records later consumed by evidence.
 
 ## Initial implementation commitment
 
-Only T1–T4 are committed for the first implementation tranche. T5–T8 receive executable planning issues now so they are ready for later autonomous execution, but those issues should remain deferred until the MVP is stable unless a later explicit decision changes sequencing.
+Only T1–T4 are committed for the first implementation tranche. T5–T8 receive executable planning issues now so they are ready for later autonomous execution, but those issues should remain deferred until the Phase 1 hardening gate is explicitly passed unless a later decision changes sequencing.
