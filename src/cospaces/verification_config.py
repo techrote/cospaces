@@ -116,7 +116,7 @@ def _check(payload: Any, index: int) -> VerificationCheck:
     command = tuple(command_items)
 
     raw_timeout = payload.get("timeout_seconds", 600)
-    if isinstance(raw_timeout, bool) or not isinstance(raw_timeout, (int, float)):
+    if isinstance(raw_timeout, bool) or not isinstance(raw_timeout, int | float):
         raise ValueError(f"checks[{index}].timeout_seconds must be numeric")
     timeout = float(raw_timeout)
     if timeout <= 0 or timeout > 86400:
