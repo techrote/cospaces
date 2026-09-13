@@ -24,7 +24,7 @@ def encode_remote_argv(argv: tuple[str, ...]) -> str:
         raise ValueError("remote argv must contain a non-empty executable")
     if any("\x00" in item for item in argv):
         raise ValueError("remote argv cannot contain NUL characters")
-    return f"set -- {shlex.join(argv)}; \"$@\""
+    return f'set -- {shlex.join(argv)}; "$@"'
 
 
 def parse_gh_version(text: str) -> tuple[int, int, int] | None:
