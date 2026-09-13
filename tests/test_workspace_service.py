@@ -127,9 +127,7 @@ def test_resolve_unknown_candidate_ref_is_not_guessed() -> None:
 def test_known_match_plus_unknown_ref_is_not_silently_selected() -> None:
     unknown = workspace("unknown")
     unknown["gitStatus"] = {}
-    service = WorkspaceService(
-        FakeGitHub([result([workspace("known", ref="feature"), unknown])])
-    )
+    service = WorkspaceService(FakeGitHub([result([workspace("known", ref="feature"), unknown])]))
 
     resolved = service.resolve("owner/repo", ref="feature")
 
