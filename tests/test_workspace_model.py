@@ -1,0 +1,1 @@
+from cospaces.domain.workspace import workspace_from_payload
