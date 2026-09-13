@@ -67,6 +67,8 @@ def test_transport_targets_exact_codespace_and_forwards_timeout() -> None:
                 "--codespace",
                 "space-one",
                 "--",
+                "-T",
+                "-oBatchMode=yes",
                 "set -- echo 'a b'; \"$@\"",
             ),
             7.5,
