@@ -1,13 +1,13 @@
 import argparse
 import json
 
+from cospaces.capabilities_output import emit_capability_result
 from cospaces.domain.capabilities import (
     CapabilityObservation,
     CapabilityReport,
     CapabilityState,
 )
 from cospaces.domain.workspace import WorkspaceIdentity
-from cospaces.capabilities_output import emit_capability_result
 from cospaces.services.capability_service import CapabilityActionResult
 
 
