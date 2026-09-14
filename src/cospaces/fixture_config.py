@@ -81,7 +81,7 @@ def _failure(code: str, message: str) -> FixtureConfigResult:
 
 
 def _scalar(value: Any) -> MetricValue | object:
-    if value is None or isinstance(value, (str, bool, int)):
+    if value is None or isinstance(value, str | bool | int):
         return value
     if isinstance(value, float) and math.isfinite(value):
         return value
@@ -266,7 +266,9 @@ def load_fixture(root: str | Path, name: str) -> FixtureConfigResult:
     ):
         return _failure("invalid_fixture", "fixture tags must be bounded identifiers")
     seed_raw = raw.get("seed")
-    if seed_raw is not None and (isinstance(seed_raw, bool) or not isinstance(seed_raw, (str, int))):
+    if seed_raw is not None and (
+        isinstance(seed_raw, bool) or not isinstance(seed_raw, str | int)
+    ):
         return _failure("invalid_fixture", "fixture seed must be a string or integer")
     parameters = _parse_parameters(raw.get("parameters"))
     if isinstance(parameters, DomainFailure):
