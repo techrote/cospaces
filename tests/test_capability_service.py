@@ -9,7 +9,6 @@ from cospaces.services.capability_service import CapabilityRequest, CapabilitySe
 from cospaces.services.run_service import RunActionResult
 from cospaces.services.workspace_service import WorkspaceActionResult
 
-
 WORKSPACE = WorkspaceIdentity(
     name="space-one",
     repository="owner/repo",
