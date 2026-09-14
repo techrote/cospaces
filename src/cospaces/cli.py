@@ -6,6 +6,8 @@ from collections.abc import Sequence
 from typing import cast
 
 from . import __version__
+from .capabilities_cli import add_capabilities_parser
+from .capabilities_dispatch import run_capabilities
 from .checkpoint_cli import add_checkpoint_parser
 from .checkpoint_dispatch import run_checkpoint
 from .domain.contracts import DomainFailure, FailureKind
@@ -30,8 +32,9 @@ def build_parser() -> argparse.ArgumentParser:
     add_run_parser(subparsers)
     add_checkpoint_parser(subparsers)
     add_verify_parser(subparsers)
+    add_capabilities_parser(subparsers)
     for tool in PLANNED_TOOLS:
-        if tool in {"workspace", "run", "checkpoint", "verify"}:
+        if tool in {"workspace", "run", "checkpoint", "verify", "capabilities"}:
             continue
         child = subparsers.add_parser(tool, help=f"{tool} tool (planned)")
         child.add_argument("--json", action="store_true", dest="json_output")
@@ -66,6 +69,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_checkpoint(namespace)
     if tool == "verify":
         return run_verify(namespace)
+    if tool == "capabilities":
+        return run_capabilities(namespace)
     return _planned_tool(tool, json_output=bool(namespace.json_output))
 
 

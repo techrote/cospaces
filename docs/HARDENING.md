@@ -1,6 +1,6 @@
 # Phase 1 Hardening Gate
 
-This document records the hardening status of the implemented four-tool MVP before deferred Phase 2 tools are activated.
+This document records the hardening status of the implemented four-tool MVP and the remaining integration evidence debt.
 
 ## Current status
 
@@ -8,9 +8,9 @@ This document records the hardening status of the implemented four-tool MVP befo
 - **Repository-wide audit (#20 / PR #21):** corrected fail-open selection, false remote provenance, verification symlink containment, non-finite timeout handling, checkpoint schema strictness, T1 controller wait bounds, malformed T2 preflight ordering, and live-smoke cwd assumptions.
 - **Real Codespace smoke:** **pending**. It has not been executed because no existing disposable Codespace was explicitly selected for live use.
 - **T2 output/process-tree hardening:** tracked separately in #22; current v0.1 capture remains intentionally documented as unbounded at the process-adapter layer.
-- **Phase 2 activation:** remains deferred while the real-Codespace smoke is pending, unless a later explicit decision supersedes this gate.
+- **Phase 2 activation:** the user explicitly activated T5 → T6 → T7 on 2026-09-14. D026 supersedes the previous sequencing block while leaving the real-Codespace smoke pending as evidence debt. T8 remains deferred unless separately activated.
 
-The pending live check is evidence debt, not permission to guess that live GitHub/Codespaces behavior passed.
+The pending live check is evidence debt. Phase 2 activation does not imply that live GitHub/Codespaces behavior passed, and no Phase 2 implementation may cite the unrun smoke as evidence.
 
 ## Network-free hardening runner
 
@@ -67,7 +67,7 @@ python tools/live_codespace_smoke.py --codespace NAME --stop-after --json
 
 `--stop-after` is never implied. Use `--keep-checkpoint` only when the generated smoke checkpoint should remain for inspection.
 
-## Evidence required to mark the gate passed
+## Evidence required to mark the live smoke passed
 
 Record at least one disposable live run showing:
 
@@ -79,4 +79,4 @@ Record at least one disposable live run showing:
 - cleanup/stop behavior matches the explicit caller choice;
 - no workspace create/delete/rebuild occurred implicitly.
 
-A failing live smoke should produce a follow-up corrective issue rather than moving Phase 2 forward by assumption.
+A failing live smoke should produce a follow-up corrective issue rather than being silently treated as success.

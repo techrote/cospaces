@@ -13,7 +13,7 @@ When instructions conflict, use this order unless a newer decision explicitly su
 5. `docs/DEVELOPMENT_WORKFLOW.md`, for implementation, verification, PR, merge, and reconciliation procedure.
 6. `docs/TOOL_CATALOG.md`, for tool responsibilities and non-goals.
 7. `docs/ROADMAP.md`, for sequencing and dependency intent.
-8. `docs/HARDENING.md`, for current Phase 1 hardening evidence/status.
+8. `docs/HARDENING.md`, for current hardening evidence/status and pending live-smoke evidence debt.
 9. `docs/EXTERNAL_WORKLOAD.md`, for the repository-owned portable host-qualification workload contract.
 10. `docs/ISSUE_ATLAS.md`, for issue-number navigation only.
 11. `README.md`, for orientation only.
@@ -23,18 +23,7 @@ If ambiguity remains and safe progress is possible, choose the smallest reversib
 ## Required retrieval by work type
 
 ### Every implementation issue
-Read:
-- this file;
-- the complete issue body;
-- `docs/PROGRAMME.md`;
-- `docs/ARCHITECTURE.md`;
-- `docs/EXECUTION_CONTRACT.md`;
-- `docs/DEVELOPMENT_WORKFLOW.md`;
-- `docs/AUTONOMOUS_ISSUE_PROMPT.md`;
-- `docs/DECISIONS.md`;
-- `docs/ISSUE_ATLAS.md` for current dependency/issue navigation;
-- the relevant tool section in `docs/TOOL_CATALOG.md`;
-- the relevant phase/dependency section in `docs/ROADMAP.md`.
+Read this file, the complete issue body, `PROGRAMME`, `ARCHITECTURE`, `EXECUTION_CONTRACT`, `DEVELOPMENT_WORKFLOW`, `AUTONOMOUS_ISSUE_PROMPT`, `DECISIONS`, `ISSUE_ATLAS`, the relevant `TOOL_CATALOG` section, and the relevant `ROADMAP` phase.
 
 ### Workspace lifecycle work
 Also read `docs/CODESPACES_GROUND_TRUTH.md`.
@@ -46,7 +35,7 @@ Also read `docs/CHECKPOINT_RESUME.md`.
 Also read `docs/VERIFICATION_EVIDENCE.md`.
 
 ### Phase 1 hardening or Phase 2 activation work
-Also read `docs/HARDENING.md`. Do not infer that the live Codespace sub-gate passed merely because network-free CI is green.
+Also read `docs/HARDENING.md`. D026 activates T5 → T6 → T7 while the live Codespace smoke remains pending evidence debt; never infer that smoke passed merely because CI is green.
 
 ### External workload / foreign-host qualification work
 Also read `docs/EXTERNAL_WORKLOAD.md`. External orchestrators own host access, scheduling, provider policy and evidence interpretation; `cospaces` owns only its repository-local bounded workload definition and result contract.
@@ -59,34 +48,33 @@ Also read `docs/EXTERNAL_WORKLOAD.md`. External orchestrators own host access, s
 - **run result**: the structured record of one remote task attempt.
 - **checkpoint**: durable task state sufficient for a later agent/session to continue intentionally.
 - **verification plan**: repository-declared checks whose results can be represented structurally.
-- **evidence bundle**: a provenance-bearing set of logs/results/artifacts for a run or verification.
+- **capability observation**: a live T5 fact with explicit `present`, `absent`, `unavailable`, or `unknown` state.
 - **fixture**: a declarative reproducible experiment or benchmark.
+- **evidence bundle**: a provenance-bearing, allowlisted package of selected records/artifacts.
 - **matrix**: repeated comparable execution over explicit dimensions such as refs, configurations, or machine profiles.
-- **external workload**: the repository-owned bounded warm workload exposed by `tools/external_workload.py` for measurement by a foreign host/orchestrator; it is not one of the eight product tools.
+- **external workload**: repository-owned bounded warm workload exposed by `tools/external_workload.py`; it is supporting machinery, not one of the eight tools.
 
 ## Eight-tool programme
 
-### MVP tranche — implemented
+### Implemented MVP
 1. `workspace`
 2. `run`
 3. `checkpoint`
 4. `verify`
 
-These four prove the complete minimum loop: acquire a prepared environment, execute work, survive interruption, and determine whether the result is acceptable.
+### Activated Phase 2 sequence
+5. `capabilities` — implementing/land before T6
+6. `fixture` — activated next
+7. `evidence` — activated after T6
 
-### Second tranche — planned and deferred
-5. `capabilities`
-6. `fixture`
-7. `evidence`
+### Deferred
 8. `matrix`
 
-These add richer environment truth, experiment reproducibility, evidence packaging, and comparative execution after the basic loop is reliable. Activation remains subject to the Phase 1 hardening gate recorded in `docs/HARDENING.md`.
-
-The external qualification workload is supporting repository machinery, not a ninth tool and not early implementation of T6 `fixture`.
+D026 is the controlling activation decision. The pending live smoke and #22 remain explicit evidence/hardening debt rather than being silently treated as resolved.
 
 ## Agent operating rule
 
-Issues in this repository are designed as autonomous execution prompts. When assigned an implementation issue, continue through implementation, local/test verification, documentation updates, commit, PR creation, automated-check observation, fixes if necessary, merge when the required checks pass and repository policy permits it, and issue reconciliation/closure. Do not stop at code generation or PR creation unless blocked by an external condition that cannot be resolved from the repository or GitHub state.
+Issues in this repository are designed as autonomous execution prompts. When assigned an implementation issue, continue through implementation, test verification, documentation updates, PR creation, automated-check observation, fixes if necessary, merge when required checks pass and repository policy permits it, and issue reconciliation/closure. Do not stop at code generation or PR creation unless blocked by an external condition that cannot be resolved from repository/GitHub state.
 
 ## Change discipline
 
