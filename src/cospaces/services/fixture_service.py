@@ -158,13 +158,12 @@ def _compare(
         return actual == expected, None
     if operator == "!=":
         return actual != expected, None
-    numeric = (
-        isinstance(actual, int | float)
-        and not isinstance(actual, bool)
-        and isinstance(expected, int | float)
-        and not isinstance(expected, bool)
-    )
-    if not numeric:
+    if (
+        not isinstance(actual, int | float)
+        or isinstance(actual, bool)
+        or not isinstance(expected, int | float)
+        or isinstance(expected, bool)
+    ):
         return False, "incomparable_values"
     left = float(actual)
     right = float(expected)
