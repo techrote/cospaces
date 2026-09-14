@@ -128,7 +128,7 @@ def _positive_int(
             kind=FailureKind.USAGE,
             message=f"{field} must be within [1, {maximum}]",
         )
-    return value
+    return int(value)
 
 
 def load_evidence_plan(root: str | Path, name: str) -> EvidenceConfigResult:

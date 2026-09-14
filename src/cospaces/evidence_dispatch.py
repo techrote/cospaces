@@ -14,18 +14,18 @@ from cospaces.services.evidence_service import (
 def run_evidence(namespace: argparse.Namespace) -> int:
     service = EvidenceService()
     if namespace.evidence_action == "create":
-        result = service.create(
+        create_result = service.create(
             EvidenceCreateRequest(
                 plan=namespace.plan,
                 root=Path(namespace.root),
                 output_directory=namespace.output_directory,
             )
         )
-        return emit_evidence_create(namespace, result)
-    result = service.validate(
+        return emit_evidence_create(namespace, create_result)
+    validation_result = service.validate(
         EvidenceValidateRequest(
             bundle=Path(namespace.bundle),
             root=Path(namespace.root),
         )
     )
-    return emit_evidence_validation(namespace, result)
+    return emit_evidence_validation(namespace, validation_result)
