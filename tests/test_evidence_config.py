@@ -37,10 +37,7 @@ def test_evidence_plan_parses_bounded_items(tmp_path: Path) -> None:
 
 def test_evidence_plan_rejects_path_traversal(tmp_path: Path) -> None:
     (tmp_path / ".cospaces.toml").write_text(
-        "[evidence.default]\n"
-        "[[evidence.default.items]]\n"
-        'path = "../secret"\n'
-        'kind = "artifact"\n',
+        '[evidence.default]\n[[evidence.default.items]]\npath = "../secret"\nkind = "artifact"\n',
         encoding="utf-8",
     )
 
