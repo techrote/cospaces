@@ -107,7 +107,13 @@ def _relative_path(value: Any, field: str) -> str | DomainFailure:
     return value
 
 
-def _positive_int(value: Any, *, default: int, maximum: int, field: str) -> int | DomainFailure:
+def _positive_int(
+    value: Any,
+    *,
+    default: int,
+    maximum: int,
+    field: str,
+) -> int | DomainFailure:
     if value is None:
         return default
     if isinstance(value, bool) or not isinstance(value, int):
@@ -127,7 +133,10 @@ def _positive_int(value: Any, *, default: int, maximum: int, field: str) -> int 
 
 def load_evidence_plan(root: str | Path, name: str) -> EvidenceConfigResult:
     if _NAME_RE.fullmatch(name) is None:
-        return _failure("invalid_evidence_plan_name", "evidence plan name must be a bounded identifier")
+        return _failure(
+            "invalid_evidence_plan_name",
+            "evidence plan name must be a bounded identifier",
+        )
     loaded = load_config(Path(root) / ".cospaces.toml")
     if not loaded.ok:
         return EvidenceConfigResult(failure=loaded.failure)
@@ -138,9 +147,8 @@ def load_evidence_plan(root: str | Path, name: str) -> EvidenceConfigResult:
     raw = section[name]
     if not isinstance(raw, dict):
         return _failure("invalid_evidence_plan", f"evidence.{name} must be a table")
-    unknown = sorted(
-        set(raw) - {"capture_root", "output_directory", "max_total_bytes", "notes", "items"}
-    )
+    allowed = {"capture_root", "output_directory", "max_total_bytes", "notes", "items"}
+    unknown = sorted(set(raw) - allowed)
     if unknown:
         return _failure(
             "invalid_evidence_plan",
@@ -153,7 +161,8 @@ def load_evidence_plan(root: str | Path, name: str) -> EvidenceConfigResult:
     if _secret_prone_path(capture_root):
         return _failure("evidence_secret_path_rejected", "capture_root is secret-prone")
     output_directory = _relative_path(
-        raw.get("output_directory", ".cospaces/evidence"), "output_directory"
+        raw.get("output_directory", ".cospaces/evidence"),
+        "output_directory",
     )
     if isinstance(output_directory, DomainFailure):
         return EvidenceConfigResult(failure=output_directory)
@@ -176,7 +185,10 @@ def load_evidence_plan(root: str | Path, name: str) -> EvidenceConfigResult:
     ):
         return _failure("invalid_evidence_plan", "notes must be a bounded list of strings")
     if any(marker in note for note in notes_raw for marker in _NOTE_SECRET_MARKERS):
-        return _failure("evidence_secret_material_detected", "Evidence notes contain secret-like material")
+        return _failure(
+            "evidence_secret_material_detected",
+            "Evidence notes contain secret-like material",
+        )
 
     items_raw = raw.get("items", [])
     if not isinstance(items_raw, list) or not items_raw or len(items_raw) > _MAX_ITEMS:
@@ -198,7 +210,10 @@ def load_evidence_plan(root: str | Path, name: str) -> EvidenceConfigResult:
         if isinstance(path, DomainFailure):
             return EvidenceConfigResult(failure=path)
         if _secret_prone_path(path):
-            return _failure("evidence_secret_path_rejected", f"items[{index}].path is secret-prone")
+            return _failure(
+                "evidence_secret_path_rejected",
+                f"items[{index}].path is secret-prone",
+            )
         kind = item.get("kind", "artifact")
         if kind not in _ALLOWED_KINDS:
             return _failure(
@@ -207,7 +222,10 @@ def load_evidence_plan(root: str | Path, name: str) -> EvidenceConfigResult:
             )
         required = item.get("required", True)
         if not isinstance(required, bool):
-            return _failure("invalid_evidence_plan", f"items[{index}].required must be boolean")
+            return _failure(
+                "invalid_evidence_plan",
+                f"items[{index}].required must be boolean",
+            )
         max_bytes = _positive_int(
             item.get("max_bytes"),
             default=_DEFAULT_ITEM_MAX_BYTES,
