@@ -14,10 +14,11 @@ When instructions conflict, use this order unless a newer decision explicitly su
 6. `docs/TOOL_CATALOG.md`, for tool responsibilities and non-goals.
 7. `docs/ROADMAP.md`, for sequencing and dependency intent.
 8. `docs/HARDENING.md`, for current hardening evidence/status and pending live-smoke evidence debt.
-9. `docs/VERIFICATION_EVIDENCE.md`, for concrete T4/T6 and planned T7/T8 result/evidence semantics.
-10. `docs/EXTERNAL_WORKLOAD.md`, for the repository-owned portable host-qualification workload contract.
-11. `docs/ISSUE_ATLAS.md`, for issue-number navigation only.
-12. `README.md`, for orientation only.
+9. `docs/VERIFICATION_EVIDENCE.md`, for T4/T6 shared verification, fixture, evidence, and matrix semantics.
+10. `docs/EVIDENCE_BUNDLES.md`, for the concrete implemented T7 evidence bundle/capture/validation contract.
+11. `docs/EXTERNAL_WORKLOAD.md`, for the repository-owned portable host-qualification workload contract.
+12. `docs/ISSUE_ATLAS.md`, for issue-number navigation only.
+13. `README.md`, for orientation only.
 
 If ambiguity remains and safe progress is possible, choose the smallest reversible implementation consistent with the higher-authority documents and record the decision in the PR. Do not broaden scope merely because adjacent functionality is attractive.
 
@@ -33,10 +34,10 @@ Also read `docs/CODESPACES_GROUND_TRUTH.md`.
 Also read `docs/CHECKPOINT_RESUME.md`.
 
 ### Verification, fixture, evidence, or matrix work
-Also read `docs/VERIFICATION_EVIDENCE.md`.
+Also read `docs/VERIFICATION_EVIDENCE.md`. For T7 evidence work, also read `docs/EVIDENCE_BUNDLES.md`.
 
 ### Phase 1 hardening or Phase 2 activation work
-Also read `docs/HARDENING.md`. D026 activates T5 → T6 → T7 while the live Codespace smoke remains pending evidence debt; never infer that smoke passed merely because CI is green.
+Also read `docs/HARDENING.md`. D026 activated T5 → T6 → T7 while the live Codespace smoke remained pending evidence debt; T5–T7 are now implemented. Never infer that the live smoke passed merely because CI is green.
 
 ### External workload / foreign-host qualification work
 Also read `docs/EXTERNAL_WORKLOAD.md`. External orchestrators own host access, scheduling, provider policy and evidence interpretation; `cospaces` owns only its repository-local bounded workload definition and result contract.
@@ -51,7 +52,7 @@ Also read `docs/EXTERNAL_WORKLOAD.md`. External orchestrators own host access, s
 - **verification plan**: repository-declared checks whose results can be represented structurally.
 - **capability observation**: a live T5 fact with explicit `present`, `absent`, `unavailable`, or `unknown` state.
 - **fixture**: a repository-declared reproducible T6 experiment/benchmark bound to a definition digest and observed remote HEAD.
-- **evidence bundle**: a provenance-bearing, allowlisted package of selected records/artifacts.
+- **evidence bundle**: a local, provenance-bearing, allowlisted T7 package of selected records/artifacts with captured-byte hashes and independent validation.
 - **matrix**: repeated comparable execution over explicit dimensions such as refs, configurations, or machine profiles.
 - **external workload**: repository-owned bounded warm workload exposed by `tools/external_workload.py`; supporting machinery, not one of the eight tools.
 
@@ -64,14 +65,12 @@ Also read `docs/EXTERNAL_WORKLOAD.md`. External orchestrators own host access, s
 4. `verify`
 5. `capabilities`
 6. `fixture`
-
-### Activated next
 7. `evidence`
 
 ### Deferred
 8. `matrix`
 
-D026 is the controlling activation decision. The pending live smoke and #22 remain explicit evidence/hardening debt rather than being silently treated as resolved.
+D026 is the controlling activation decision for the completed T5–T7 sequence. The real Codespace smoke remains pending evidence debt and issue #22 remains open T2 hardening debt; neither is silently treated as resolved. T8/#9 requires a separate activation decision.
 
 ## Agent operating rule
 
