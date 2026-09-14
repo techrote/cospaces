@@ -88,7 +88,7 @@ class CapabilityService:
         if version is None:
             return CapabilityObservation(
                 name="github_cli",
-                state=CapabilityState.PRESENT,
+                state=CapabilityState.UNKNOWN,
                 reason="version_parse_failed",
             )
         return CapabilityObservation(
@@ -152,9 +152,10 @@ class CapabilityService:
         combined = "\n".join(part for part in (record.stdout, record.stderr) if part)
         if result.failure is None:
             version, reason = self._version(probe, combined)
+            state = CapabilityState.UNKNOWN if reason is not None else CapabilityState.PRESENT
             return CapabilityObservation(
                 name=probe.name,
-                state=CapabilityState.PRESENT,
+                state=state,
                 value=_bounded_line(record.stdout) or _bounded_line(record.stderr),
                 version=version,
                 reason=reason,
@@ -181,7 +182,8 @@ class CapabilityService:
         if not config_result.ok:
             assert config_result.failure is not None
             return CapabilityActionResult(failure=config_result.failure)
-        config: CapabilityConfig = config_result.config  # type: ignore[assignment]
+        config = config_result.config
+        assert config is not None
 
         resolved = self._resolve(request)
         if not resolved.ok:
