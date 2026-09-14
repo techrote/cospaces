@@ -1,5 +1,7 @@
 """CLI parser for T5 capabilities."""
 
+from __future__ import annotations
+
 import argparse
 
 
