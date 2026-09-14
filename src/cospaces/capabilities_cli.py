@@ -3,7 +3,9 @@
 import argparse
 
 
-def add_capabilities_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def add_capabilities_parser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     parser = subparsers.add_parser(
         "capabilities",
         help="inspect live controller and Codespace capabilities",
