@@ -16,14 +16,14 @@ def test_no_tool_prints_help(capsys) -> None:
 
 
 def test_deferred_tool_json_is_parseable_and_prose_free(capsys) -> None:
-    status = main(["evidence", "--json"])
+    status = main(["matrix", "--json"])
 
     captured = capsys.readouterr()
     payload = json.loads(captured.out)
     assert status == 1
     assert captured.err == ""
     assert payload["schema"] == "cospaces.result/v1"
-    assert payload["operation"] == "evidence"
+    assert payload["operation"] == "matrix"
     assert payload["ok"] is False
     assert payload["error"]["code"] == "not_implemented"
 
@@ -53,6 +53,19 @@ def test_fixture_parser_is_registered() -> None:
     assert "--codespace" in completed.stdout
     assert "--repo" in completed.stdout
     assert "fixture" in completed.stdout
+
+
+def test_evidence_parser_is_registered() -> None:
+    completed = subprocess.run(
+        [sys.executable, "-m", "cospaces", "evidence", "--help"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    assert "create" in completed.stdout
+    assert "validate" in completed.stdout
 
 
 def test_all_eight_tool_names_are_registered() -> None:
