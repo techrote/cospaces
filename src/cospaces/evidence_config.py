@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
@@ -14,6 +13,20 @@ from .domain.contracts import DomainFailure, FailureKind
 _NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 _ALLOWED_KINDS = frozenset(
     {"artifact", "checkpoint", "fixture", "log", "other", "run", "verification"}
+)
+_SECRET_COMPONENTS = frozenset({".ssh", ".gnupg", ".aws", ".azure", ".kube"})
+_SECRET_FILENAMES = frozenset(
+    {".git-credentials", ".netrc", "id_dsa", "id_ecdsa", "id_ed25519", "id_rsa"}
+)
+_NOTE_SECRET_MARKERS = (
+    "-----BEGIN OPENSSH PRIVATE KEY-----",
+    "-----BEGIN PRIVATE KEY-----",
+    "github_pat_",
+    "ghp_",
+    "gho_",
+    "ghs_",
+    "ghu_",
+    "ghr_",
 )
 _DEFAULT_ITEM_MAX_BYTES = 50 * 1024 * 1024
 _MAX_ITEM_BYTES = 1024 * 1024 * 1024
@@ -54,6 +67,20 @@ class EvidenceConfigResult:
 def _failure(code: str, message: str) -> EvidenceConfigResult:
     return EvidenceConfigResult(
         failure=DomainFailure(code=code, kind=FailureKind.USAGE, message=message)
+    )
+
+
+def _secret_prone_path(value: str) -> bool:
+    path = PurePosixPath(value)
+    parts = [part.lower() for part in path.parts]
+    if any(part in _SECRET_COMPONENTS for part in parts):
+        return True
+    name = path.name.lower()
+    if name in _SECRET_FILENAMES or name == ".env" or name.startswith(".env."):
+        return True
+    return any(
+        part == ".git" and parts[index + 1] in {"config", "credentials"}
+        for index, part in enumerate(parts[:-1])
     )
 
 
@@ -111,7 +138,9 @@ def load_evidence_plan(root: str | Path, name: str) -> EvidenceConfigResult:
     raw = section[name]
     if not isinstance(raw, dict):
         return _failure("invalid_evidence_plan", f"evidence.{name} must be a table")
-    unknown = sorted(set(raw) - {"capture_root", "output_directory", "max_total_bytes", "notes", "items"})
+    unknown = sorted(
+        set(raw) - {"capture_root", "output_directory", "max_total_bytes", "notes", "items"}
+    )
     if unknown:
         return _failure(
             "invalid_evidence_plan",
@@ -121,11 +150,15 @@ def load_evidence_plan(root: str | Path, name: str) -> EvidenceConfigResult:
     capture_root = _relative_path(raw.get("capture_root", "."), "capture_root")
     if isinstance(capture_root, DomainFailure):
         return EvidenceConfigResult(failure=capture_root)
+    if _secret_prone_path(capture_root):
+        return _failure("evidence_secret_path_rejected", "capture_root is secret-prone")
     output_directory = _relative_path(
         raw.get("output_directory", ".cospaces/evidence"), "output_directory"
     )
     if isinstance(output_directory, DomainFailure):
         return EvidenceConfigResult(failure=output_directory)
+    if _secret_prone_path(output_directory):
+        return _failure("evidence_secret_path_rejected", "output_directory is secret-prone")
     max_total = _positive_int(
         raw.get("max_total_bytes"),
         default=_DEFAULT_TOTAL_BYTES,
@@ -142,6 +175,8 @@ def load_evidence_plan(root: str | Path, name: str) -> EvidenceConfigResult:
         or not all(isinstance(item, str) and len(item) <= 1000 for item in notes_raw)
     ):
         return _failure("invalid_evidence_plan", "notes must be a bounded list of strings")
+    if any(marker in note for note in notes_raw for marker in _NOTE_SECRET_MARKERS):
+        return _failure("evidence_secret_material_detected", "Evidence notes contain secret-like material")
 
     items_raw = raw.get("items", [])
     if not isinstance(items_raw, list) or not items_raw or len(items_raw) > _MAX_ITEMS:
@@ -162,6 +197,8 @@ def load_evidence_plan(root: str | Path, name: str) -> EvidenceConfigResult:
         path = _relative_path(item.get("path"), f"items[{index}].path")
         if isinstance(path, DomainFailure):
             return EvidenceConfigResult(failure=path)
+        if _secret_prone_path(path):
+            return _failure("evidence_secret_path_rejected", f"items[{index}].path is secret-prone")
         kind = item.get("kind", "artifact")
         if kind not in _ALLOWED_KINDS:
             return _failure(
