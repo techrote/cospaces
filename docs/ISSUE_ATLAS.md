@@ -15,22 +15,20 @@ This is a navigation aid. Issue bodies and canonical contract documents remain a
 | #20 | Repository-wide MVP audit/corrective hardening | Hardening | #1–#5 + #18 | complete with PR #21 |
 | #22 | Bound T2 output + local timeout cleanup | Hardening debt | T2 + #20 | open follow-up |
 | #23 | Portable external qualification workload | Supporting machinery | stable repository quality stack | complete with PR #24 |
-| #6 | T5 `capabilities` | Phase 2 | stable T1/T2 + explicit D026 activation | active/implementing |
-| #7 | T6 `fixture` | Phase 2 | T5 merged; stable T1/T2/T4 | activated next |
-| #8 | T7 `evidence` | Phase 2 | stable result/checkpoint records; T6 when present | activated after T6 |
+| #6 | T5 `capabilities` | Phase 2 | stable T1/T2 + D026 activation | complete with PR #28 |
+| #7 | T6 `fixture` | Phase 2 | T5 merged; stable T1/T2/T4 | implementing in PR #29 |
+| #8 | T7 `evidence` | Phase 2 | stable result/checkpoint records + landed T6 | activated next |
 | #9 | T8 `matrix` | Phase 2 | T1/T2 + T6; T7 optional | deferred |
 
 ## Current programme boundary
 
-Issues #1 through #5 established the repository foundation plus T1–T4. Issue #18 established network-free hardening; issue #20 performed the repository-wide corrective audit; issue #23 added repository-support workload machinery.
-
-The real disposable-Codespace smoke remains pending evidence debt. D026 records the user's explicit 2026-09-14 instruction to proceed with **T5 → T6 → T7**, so that pending smoke no longer blocks those three implementation issues. It is not considered passed and cannot be cited as live evidence.
+T1–T5 are merged. T6 implements the next D026 waypoint and T7 follows after T6 lands. The real disposable-Codespace smoke remains pending evidence debt: it does not block T5–T7, is not considered passed, and cannot be cited as observed live behavior.
 
 Issue #22 remains independent hardening debt around T2 output/process-tree resource handling. T8/#9 remains deferred unless separately activated.
 
 ## Autonomous completion rule
 
-Every issue contains or incorporates the full autonomous execution mandate. The expected terminal state for a ready implementation issue is not “PR opened”; it is:
+Every issue contains or incorporates the full autonomous execution mandate. The expected terminal state for a ready implementation issue is:
 
 ```text
 implemented -> verified -> PR opened -> automated checks green -> PR merged -> merge verified -> issue reconciled/closed
