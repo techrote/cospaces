@@ -241,9 +241,7 @@ def _record_provenance(
             "evidence_record_invalid",
             "Checkpoint item is not cospaces.checkpoint/v1",
         )
-    if kind == "run" and not (
-        operation == "run" or isinstance(payload.get("run_id"), str)
-    ):
+    if kind == "run" and not (operation == "run" or isinstance(payload.get("run_id"), str)):
         return _failure(
             "evidence_record_invalid",
             "Run item does not contain a run record",
@@ -528,11 +526,16 @@ class EvidenceService:
                 f"Evidence file changed size during capture: {item.path}",
             )
         try:
+            if _contains_secret_marker(destination):
+                return _failure(
+                    "evidence_secret_material_detected",
+                    f"Secret-like material detected in captured bytes: {item.path}",
+                )
             digest = _sha256(destination)
         except OSError:
             return _failure(
                 "evidence_hash_failed",
-                f"Cannot hash captured evidence file: {item.path}",
+                f"Cannot scan/hash captured evidence file: {item.path}",
             )
 
         source_schema: str | None = None
@@ -625,19 +628,14 @@ class EvidenceService:
                 checked += 1
 
         actual_files: set[str] = set()
-        files_dir = bundle / "files"
-        if files_dir.exists():
-            for child in files_dir.rglob("*"):
-                if child.is_symlink():
-                    return self._validation_failure(
-                        "Evidence bundle contains a symlink"
-                    )
-                if child.is_file():
-                    actual_files.add(child.relative_to(bundle).as_posix())
+        for child in bundle.rglob("*"):
+            if child.is_symlink():
+                return self._validation_failure("Evidence bundle contains a symlink")
+            if not child.is_file() or child == manifest_path:
+                continue
+            actual_files.add(child.relative_to(bundle).as_posix())
         if actual_files != expected_files:
-            return self._validation_failure(
-                "Evidence bundle contains missing or unexpected files"
-            )
+            return self._validation_failure("Evidence bundle contains missing or unexpected files")
 
         return EvidenceValidationActionResult(
             record=EvidenceValidationRecord(
@@ -654,9 +652,7 @@ class EvidenceService:
         item: object,
     ) -> str | None | EvidenceValidationActionResult:
         if not isinstance(item, dict):
-            return self._validation_failure(
-                "Evidence item manifest entry is invalid"
-            )
+            return self._validation_failure("Evidence item manifest entry is invalid")
         status = item.get("status")
         stored_path = item.get("stored_path")
         if status == "missing_optional":
@@ -666,44 +662,32 @@ class EvidenceService:
                 )
             return None
         if status != "captured" or not isinstance(stored_path, str):
-            return self._validation_failure(
-                "Evidence item status/stored_path is invalid"
-            )
+            return self._validation_failure("Evidence item status/stored_path is invalid")
         pure = PurePosixPath(stored_path)
         if pure.is_absolute() or ".." in pure.parts or "\\" in stored_path:
             return self._validation_failure("Evidence stored path is unsafe")
         candidate = bundle.joinpath(*pure.parts)
         if candidate.is_symlink():
-            return self._validation_failure(
-                "Evidence stored file must not be a symlink"
-            )
+            return self._validation_failure("Evidence stored file must not be a symlink")
         try:
             target = candidate.resolve(strict=True)
         except OSError:
             return self._validation_failure("Evidence stored file is missing")
         if not _inside(target, bundle) or not target.is_file():
-            return self._validation_failure(
-                "Evidence stored file escapes bundle or is not regular"
-            )
+            return self._validation_failure("Evidence stored file escapes bundle or is not regular")
         size = item.get("size_bytes")
         digest = item.get("sha256")
         if not isinstance(size, int) or size < 0 or not isinstance(digest, str):
-            return self._validation_failure(
-                "Evidence item size/hash metadata is invalid"
-            )
+            return self._validation_failure("Evidence item size/hash metadata is invalid")
         try:
             if target.stat().st_size != size or _sha256(target) != digest:
-                return self._validation_failure(
-                    "Evidence file hash or size mismatch"
-                )
+                return self._validation_failure("Evidence file hash or size mismatch")
             if _contains_secret_marker(target):
                 return self._validation_failure(
                     "Evidence file contains rejected secret-like material"
                 )
         except OSError:
-            return self._validation_failure(
-                "Evidence file could not be read during validation"
-            )
+            return self._validation_failure("Evidence file could not be read during validation")
         return pure.as_posix()
 
     @staticmethod

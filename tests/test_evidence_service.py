@@ -15,8 +15,7 @@ def write_plan(tmp_path: Path, items: str, *, capture_root: str = "capture") -> 
         f'capture_root = "{capture_root}"\n'
         'output_directory = "bundles"\n'
         "max_total_bytes = 1000000\n"
-        'notes = ["public-safe test bundle"]\n'
-        + items,
+        'notes = ["public-safe test bundle"]\n' + items,
         encoding="utf-8",
     )
 
@@ -98,9 +97,7 @@ def test_missing_required_file_fails_without_final_bundle(tmp_path: Path) -> Non
     (tmp_path / "capture").mkdir()
     write_plan(
         tmp_path,
-        "[[evidence.default.items]]\n"
-        'path = "missing.bin"\n'
-        'kind = "artifact"\n',
+        '[[evidence.default.items]]\npath = "missing.bin"\nkind = "artifact"\n',
     )
 
     result = EvidenceService().create(EvidenceCreateRequest(plan="default", root=tmp_path))
@@ -119,9 +116,7 @@ def test_secret_prone_path_is_rejected(tmp_path: Path) -> None:
     (capture / ".env").write_text("SAFE_FOR_TEST=true\n", encoding="utf-8")
     write_plan(
         tmp_path,
-        "[[evidence.default.items]]\n"
-        'path = ".env"\n'
-        'kind = "artifact"\n',
+        '[[evidence.default.items]]\npath = ".env"\nkind = "artifact"\n',
     )
 
     result = EvidenceService().create(EvidenceCreateRequest(plan="default", root=tmp_path))
@@ -137,9 +132,7 @@ def test_secret_material_marker_is_rejected(tmp_path: Path) -> None:
     (capture / "log.txt").write_text("prefix ghp_not-a-real-token suffix\n", encoding="utf-8")
     write_plan(
         tmp_path,
-        "[[evidence.default.items]]\n"
-        'path = "log.txt"\n'
-        'kind = "log"\n',
+        '[[evidence.default.items]]\npath = "log.txt"\nkind = "log"\n',
     )
 
     result = EvidenceService().create(EvidenceCreateRequest(plan="default", root=tmp_path))
@@ -158,9 +151,7 @@ def test_symlink_escape_is_rejected(tmp_path: Path) -> None:
     link.symlink_to(outside)
     write_plan(
         tmp_path,
-        "[[evidence.default.items]]\n"
-        'path = "link.txt"\n'
-        'kind = "artifact"\n',
+        '[[evidence.default.items]]\npath = "link.txt"\nkind = "artifact"\n',
     )
 
     result = EvidenceService().create(EvidenceCreateRequest(plan="default", root=tmp_path))
@@ -176,9 +167,7 @@ def test_capture_root_cannot_be_secret_prone_directory(tmp_path: Path) -> None:
     (secret_root / "known_hosts").write_text("example", encoding="utf-8")
     write_plan(
         tmp_path,
-        "[[evidence.default.items]]\n"
-        'path = "known_hosts"\n'
-        'kind = "artifact"\n',
+        '[[evidence.default.items]]\npath = "known_hosts"\nkind = "artifact"\n',
         capture_root=".ssh",
     )
 
@@ -195,9 +184,7 @@ def test_tampering_is_detected_by_independent_validation(tmp_path: Path) -> None
     (capture / "artifact.bin").write_bytes(b"original")
     write_plan(
         tmp_path,
-        "[[evidence.default.items]]\n"
-        'path = "artifact.bin"\n'
-        'kind = "artifact"\n',
+        '[[evidence.default.items]]\npath = "artifact.bin"\nkind = "artifact"\n',
     )
     service = EvidenceService()
     created = service.create(EvidenceCreateRequest(plan="default", root=tmp_path))
@@ -221,9 +208,7 @@ def test_declared_fixture_record_must_match_schema(tmp_path: Path) -> None:
     (capture / "fixture.json").write_text('{"schema":"wrong/v1"}\n', encoding="utf-8")
     write_plan(
         tmp_path,
-        "[[evidence.default.items]]\n"
-        'path = "fixture.json"\n'
-        'kind = "fixture"\n',
+        '[[evidence.default.items]]\npath = "fixture.json"\nkind = "fixture"\n',
     )
 
     result = EvidenceService().create(EvidenceCreateRequest(plan="default", root=tmp_path))

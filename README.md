@@ -4,21 +4,21 @@ Task-oriented GitHub Codespaces utilities for long-horizon agentic development.
 
 `cospaces` is intended to turn a repository-specific Codespace into a reproducible remote workbench that an autonomous coding/research agent can understand, operate, checkpoint, verify, and hand off safely.
 
-The programme deliberately starts small: define eight composable utilities, implement four in the first tranche, and keep the execution contract narrow enough to test rigorously.
+The programme defines eight composable utilities. T1–T7 are implemented; T8 `matrix` remains deferred until separately activated.
 
-## Initial implementation tranche
+## Implemented tools
 
 1. **workspace** — select/create/reuse/stop and describe the task Codespace.
 2. **run** — execute non-interactive commands remotely and return structured results.
 3. **checkpoint** — persist resumable task state independent of a live process or chat context.
 4. **verify** — execute repository-declared checks and emit structured verification results.
+5. **capabilities** — separate repository-declared support from live controller/workspace observations.
+6. **fixture** — run reproducible declarative experiments and benchmarks with provenance and assertions.
+7. **evidence** — package explicitly allowlisted local records/artifacts into independently validated evidence bundles.
 
-## Planned second tranche
+## Deferred tool
 
-5. **capabilities** — report what the current environment can actually do.
-6. **fixture** — run reproducible declarative experiments and benchmarks.
-7. **evidence** — package logs, metadata, hashes, outputs, and provenance.
-8. **matrix** — compare runs across refs/configurations/machine profiles.
+8. **matrix** — compare runs across refs/configurations/machine profiles. T8 requires a separate activation decision.
 
 ## Start here
 
@@ -48,11 +48,11 @@ python -m cospaces --help
 cospaces --help
 ```
 
-Repository-local configuration lives at `.cospaces.toml`. `[cospaces]` currently accepts only `schema_version = 1`; T4 consumes the separate `[verify.<plan>]` sections described below. Other top-level sections remain reserved for later tools.
+Repository-local configuration lives at `.cospaces.toml`. `[cospaces]` accepts `schema_version = 1`; implemented tools consume their own top-level sections such as `[verify.<plan>]`, `[capabilities]`, `[fixture.<name>]`, and `[evidence.<plan>]` according to the canonical docs.
 
 ## Portable external qualification workload
 
-`cospaces` also exposes a bounded repository-owned **warm workload** for measurement by external hosts/orchestrators. This is supporting repository machinery, not a ninth product tool and not early T6 `fixture` implementation.
+`cospaces` also exposes a bounded repository-owned **warm workload** for measurement by external hosts/orchestrators. This is supporting repository machinery, not a ninth product tool.
 
 After cloning a pinned commit and installing `.[dev]`, the recommended representative workload is:
 
@@ -172,9 +172,19 @@ Each invocation receives a unique `verification_id`. The `cospaces.verify/v1` re
 
 For v0.1, the JSON result on stdout is authoritative; T4 does not create a persistent report file automatically. It also does not replace code review or invent product-correctness criteria—the repository declares what verification means.
 
+## Phase 2 implemented subset
+
+T5–T7 were explicitly activated by D026 and are now implemented.
+
+- `capabilities` emits `cospaces.capabilities/v1` and separates declared support from live observations.
+- `fixture` emits `cospaces.fixture/v1`, binds runs to a canonical definition digest and remotely observed pre-execution HEAD, and supports bounded scalar metrics/assertions.
+- `evidence` creates local allowlisted bundles with captured-byte SHA-256 hashes and independent validation. See [`docs/EVIDENCE_BUNDLES.md`](docs/EVIDENCE_BUNDLES.md).
+
+T8 `matrix` remains deferred.
+
 ## Phase 1 hardening status
 
-T1–T4 complete the intended first implementation tranche. Issue #18 added a CI-enforced network-free hardening runner, and issue #20/PR #21 performed a repository-wide corrective audit:
+Issue #18 added a CI-enforced network-free hardening runner, and issue #20/PR #21 performed a repository-wide corrective audit:
 
 ```bash
 python tools/hardening_smoke.py --json
@@ -182,7 +192,7 @@ python tools/hardening_smoke.py --json
 
 The audit tightened target certainty, provenance truthfulness, physical verification containment, timeout/schema validation, and malformed-request preflight. The larger T2 output/process-tree limitation is tracked separately in #22 rather than being hidden by a partial fix.
 
-The real disposable-Codespace smoke is intentionally **not** automatic and remains pending until an existing disposable Codespace is named explicitly. See [`docs/HARDENING.md`](docs/HARDENING.md). Phase 2 remains deferred while that evidence is pending unless a later explicit decision changes the gate.
+The real disposable-Codespace smoke is intentionally **not** automatic and remains pending until an existing disposable Codespace is named explicitly. See [`docs/HARDENING.md`](docs/HARDENING.md). D026 allowed T5–T7 to proceed without claiming that live smoke passed; it remains explicit evidence debt.
 
 ## Opt-in live smoke
 

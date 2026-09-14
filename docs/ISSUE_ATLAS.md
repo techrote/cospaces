@@ -16,15 +16,18 @@ This is a navigation aid. Issue bodies and canonical contract documents remain a
 | #22 | Bound T2 output + local timeout cleanup | Hardening debt | T2 + #20 | open follow-up |
 | #23 | Portable external qualification workload | Supporting machinery | stable repository quality stack | complete with PR #24 |
 | #6 | T5 `capabilities` | Phase 2 | stable T1/T2 + D026 activation | complete with PR #28 |
-| #7 | T6 `fixture` | Phase 2 | T5 merged; stable T1/T2/T4 | implementing in PR #29 |
-| #8 | T7 `evidence` | Phase 2 | stable result/checkpoint records + landed T6 | activated next |
+| #7 | T6 `fixture` | Phase 2 | T5 merged; stable T1/T2/T4 | complete with PR #29 |
+| #8 | T7 `evidence` | Phase 2 | stable result/checkpoint records + landed T6 | complete with PR #30 |
+| #31 | T5–T7 status-document reconciliation | Reconciliation | merged #28–#30 | complete with PR #32 |
 | #9 | T8 `matrix` | Phase 2 | T1/T2 + T6; T7 optional | deferred |
 
 ## Current programme boundary
 
-T1–T5 are merged. T6 implements the next D026 waypoint and T7 follows after T6 lands. The real disposable-Codespace smoke remains pending evidence debt: it does not block T5–T7, is not considered passed, and cannot be cited as observed live behavior.
+T1–T7 are implemented and merged. The D026 T5 → T6 → T7 sequence is complete. T7's concrete local evidence-bundle contract lives in `docs/EVIDENCE_BUNDLES.md`.
 
-Issue #22 remains independent hardening debt around T2 output/process-tree resource handling. T8/#9 remains deferred unless separately activated.
+The real disposable-Codespace smoke remains pending evidence debt: it did not block T5–T7, is not considered passed, and cannot be cited as observed live behavior. Issue #22 remains independent hardening debt around T2 output/process-tree resource handling.
+
+No further product tool is currently activated. T8/#9 remains deferred unless separately activated.
 
 ## Autonomous completion rule
 

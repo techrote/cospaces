@@ -26,7 +26,7 @@ T5 emits `cospaces.capabilities/v1`; observations are `present`, `absent`, `unav
 
 Non-goals: package management, automatic repair/install, environment dumps, or treating declared support as observed truth.
 
-## T6 — `fixture` — Phase 2 — implemented
+## T6 — `fixture` — implemented
 
 ### Purpose
 Run bounded, reproducible repository-declared experiments and benchmarks in exactly one Codespace and emit provenance-bearing structured results.
@@ -68,19 +68,43 @@ T6 references output paths; it does not copy artifact bytes. T7 owns later allow
 ### Non-goals
 Notebook platform, arbitrary DAG/workflow engine, distributed scheduler, domain-specific scientific semantics, or automatic result interpretation.
 
-## T7 — `evidence` — Phase 2 — activated next
+## T7 — `evidence` — implemented
 
 ### Purpose
-Create a provenance-bearing, allowlisted evidence bundle for selected run/verification/fixture/checkpoint records and artifacts.
+Create a bounded, provenance-bearing local evidence bundle for explicitly selected run/verification/fixture/checkpoint records and artifacts.
 
-Bundles must use deterministic manifests, explicit capture roots/paths, hashes/sizes, traversal and symlink protections, and visible optional omissions. They must never default to broad workspace/home capture or secret-prone content.
+### Interface
+
+```bash
+cospaces evidence create PLAN --root . --json
+cospaces evidence create PLAN --root . --output .cospaces/evidence --json
+cospaces evidence validate BUNDLE --root . --json
+```
+
+Creation emits `cospaces.evidence/v1`; validation emits `cospaces.evidence-validation/v1` inside the normal `cospaces.result/v1` envelope.
+
+### Capture model
+- repository-controlled `[evidence.<plan>]` configuration;
+- explicit local `capture_root` and per-item paths;
+- bounded per-item and total byte limits;
+- required/optional items and typed record/artifact kinds;
+- only regular files are captured; T7 does not crawl directories or SSH into a Codespace;
+- physical containment and symlink-escape rejection;
+- secret-prone path/content rejection;
+- destination bytes are scanned, sized, and SHA-256 hashed after copy;
+- optional omissions remain explicit in the manifest;
+- recognized cospaces record schemas contribute bounded per-item provenance;
+- fresh bundle creation uses `manifest.json` plus indexed `files/NNNN` payloads and atomic finalization;
+- independent validation checks schema, safe stored paths, exact file set, no symlinks, size/hash integrity, and secret markers.
+
+The complete implemented contract is `docs/EVIDENCE_BUNDLES.md`.
 
 ### Non-goals
-Long-term artifact hosting, automatic third-party upload, workspace snapshots, or secret backup.
+Long-term artifact hosting, automatic third-party upload, workspace snapshots, remote workspace crawling, or secret backup.
 
-## T8 — `matrix` — Phase 2 — deferred
+## T8 — `matrix` — deferred
 
-Execute comparable operations across explicit dimensions such as refs, repository configurations, fixture parameters, or Codespaces machine profiles and aggregate comparable outcomes. It is not a general distributed scheduler or CI farm.
+Execute comparable operations across explicit dimensions such as refs, repository configurations, fixture parameters, or Codespaces machine profiles and aggregate comparable outcomes. It is not a general distributed scheduler or CI farm. T8 requires a separate activation decision.
 
 ## Dependency graph
 
@@ -98,4 +122,4 @@ run/checkpoint/verify may all contribute records later consumed by evidence.
 
 ## Current implementation commitment
 
-T1–T6 are implemented. D026 activates T7 next while the real Codespace smoke remains pending evidence debt; T8 remains deferred unless separately activated.
+T1–T7 are implemented. The real Codespace smoke remains pending evidence debt and #22 remains open T2 hardening debt. T8 remains deferred unless separately activated.
