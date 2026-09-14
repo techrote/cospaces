@@ -154,7 +154,7 @@ This file records load-bearing programme decisions. New decisions should append 
 
 **Rationale:** Live smoke may start billable compute. Passing network-free CI is not evidence that real Codespaces behavior has been exercised, and the project must not spend or mutate lifecycle implicitly merely to satisfy a roadmap checkbox.
 
-**Status:** active.
+**Status:** superseded for Phase 2 sequencing by D026; live-evidence requirements remain active.
 
 ## D022 — Remote provenance must be observed remotely
 
@@ -187,5 +187,23 @@ This file records load-bearing programme decisions. New decisions should append 
 **Rationale:** The codebase being measured should own the exact workload definition so external qualification can pin a commit and compare like with like. Host access, cold clone/install measurement, scheduling, provider policy, evidence retention and interpretation remain the external orchestrator's responsibility.
 
 **Safety:** Successful stage logs are not embedded in results; stage output is spooled to disposable files, failure diagnostics are bounded, environment variables/hostname/user paths are not serialized, repetitions/timeouts are bounded, and package build uses `--no-isolation` so the warm profile requires no package-network access after dependencies are installed.
+
+**Status:** active.
+
+## D026 — Phase 2 T5–T7 is activated while the live smoke remains pending
+
+**Decision:** The user's explicit instruction on 2026-09-14 to implement T5, then T6, then T7 satisfies the previously documented explicit-waiver path for Phase 2 activation. T5–T7 may therefore proceed in that order without first executing the real disposable-Codespace smoke.
+
+**Rationale:** The remaining live smoke is valuable integration evidence but is not a technical dependency for the network-free implementation and validation contracts of T5–T7. Keeping it as evidence debt preserves truthfulness without unnecessarily blocking independently testable work.
+
+**Boundary:** This does **not** mark the live smoke as passed, waive its evidence requirements, resolve #22, or permit any claim about unobserved live Codespaces behavior. T8 remains deferred unless separately activated.
+
+**Status:** active.
+
+## D027 — T5 separates repository intent from observed capability truth
+
+**Decision:** `cospaces capabilities` emits `cospaces.capabilities/v1` and keeps repository-declared support hints separate from live observations. Live observations use the explicit states `present`, `absent`, `unavailable`, and `unknown`, target one T1-selected workspace, and execute remote probes only through T2.
+
+**Rationale:** Configuration can express intended support but cannot prove environment state. Capability reporting must preserve uncertainty and lower-layer failure information rather than turning missing metadata, probe failure, or version-parse failure into optimistic presence claims.
 
 **Status:** active.
