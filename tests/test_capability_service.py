@@ -93,7 +93,7 @@ def run_result(
     return RunActionResult(record=record, workspace=WORKSPACE, failure=failure)
 
 
-def test_capabilities_distinguishes_present_absent_and_parse_failure(tmp_path: Path) -> None:
+def test_capabilities_distinguishes_present_absent_and_unknown(tmp_path: Path) -> None:
     (tmp_path / ".cospaces.toml").write_text(
         "[capabilities.supports]\n"
         "build = true\n"
@@ -150,7 +150,7 @@ def test_capabilities_distinguishes_present_absent_and_parse_failure(tmp_path: P
     assert observations["python"].version == "3.11.9"
     assert observations["missing"].state == CapabilityState.ABSENT
     assert observations["missing"].reason == "executable_unavailable"
-    assert observations["odd"].state == CapabilityState.PRESENT
+    assert observations["odd"].state == CapabilityState.UNKNOWN
     assert observations["odd"].version is None
     assert observations["odd"].reason == "version_parse_failed"
     assert all(request.codespace == WORKSPACE.name for request in fake_run.requests)
@@ -183,7 +183,7 @@ def test_probe_timeout_is_unavailable_not_absent(tmp_path: Path) -> None:
     assert observations["remote_os"].reason == "remote_timeout"
 
 
-def test_github_cli_version_parse_failure_is_present_but_unknown(tmp_path: Path) -> None:
+def test_github_cli_version_parse_failure_is_unknown(tmp_path: Path) -> None:
     fake_run = FakeRun(
         [
             run_result(("uname", "-s"), stdout="Linux\n", run_id="os"),
@@ -200,7 +200,7 @@ def test_github_cli_version_parse_failure_is_present_but_unknown(tmp_path: Path)
 
     assert result.ok
     assert result.report is not None
-    assert result.report.github_cli.state == CapabilityState.PRESENT
+    assert result.report.github_cli.state == CapabilityState.UNKNOWN
     assert result.report.github_cli.version is None
     assert result.report.github_cli.reason == "version_parse_failed"
 
