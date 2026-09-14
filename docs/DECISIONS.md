@@ -207,3 +207,15 @@ This file records load-bearing programme decisions. New decisions should append 
 **Rationale:** Configuration can express intended support but cannot prove environment state. Capability reporting must preserve uncertainty and lower-layer failure information rather than turning missing metadata, probe failure, or version-parse failure into optimistic presence claims.
 
 **Status:** active.
+
+## D028 — T6 fixtures bind reproducibility to observed remote provenance and contained paths
+
+**Decision:** `cospaces fixture` emits `cospaces.fixture/v1`. A fixture definition is canonically SHA-256 digested; before the experiment starts T6 observes the selected Codespace's Git HEAD through T2, then executes the task and any output checks through T2 pinned to that same workspace. Working directory, declared inputs and declared outputs must resolve physically within the remote repository checkout.
+
+**Rationale:** Reproducible experiment results require both a stable definition identity and source provenance actually observed in the execution environment. Lexically relative paths alone are insufficient because symlinks can escape the checkout; T6 therefore applies the same fail-closed physical-containment principle as T4.
+
+**Metrics:** v1 optionally parses a bounded scalar JSON object from the final non-empty stdout line and evaluates repository-declared scalar assertions. Seed and parameters are explicit reproducibility metadata injected as `COSPACES_FIXTURE_*` environment assignments; they are not a secret channel.
+
+**Boundary:** T6 references declared output paths but does not package artifact bytes. T7 owns allowlisted capture/hashing. T6 adds no transport layer and inherits T2's documented #22 output/timeout limitation.
+
+**Status:** active.

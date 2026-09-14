@@ -12,6 +12,8 @@ from .checkpoint_cli import add_checkpoint_parser
 from .checkpoint_dispatch import run_checkpoint
 from .domain.contracts import DomainFailure, FailureKind
 from .domain.results import failure_result
+from .fixture_cli import add_fixture_parser
+from .fixture_dispatch import run_fixture
 from .run_cli import add_run_parser
 from .run_dispatch import run_remote
 from .services.tool_registry import PLANNED_TOOLS
@@ -33,8 +35,10 @@ def build_parser() -> argparse.ArgumentParser:
     add_checkpoint_parser(subparsers)
     add_verify_parser(subparsers)
     add_capabilities_parser(subparsers)
+    add_fixture_parser(subparsers)
+    implemented = {"workspace", "run", "checkpoint", "verify", "capabilities", "fixture"}
     for tool in PLANNED_TOOLS:
-        if tool in {"workspace", "run", "checkpoint", "verify", "capabilities"}:
+        if tool in implemented:
             continue
         child = subparsers.add_parser(tool, help=f"{tool} tool (planned)")
         child.add_argument("--json", action="store_true", dest="json_output")
@@ -71,6 +75,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_verify(namespace)
     if tool == "capabilities":
         return run_capabilities(namespace)
+    if tool == "fixture":
+        return run_fixture(namespace)
     return _planned_tool(tool, json_output=bool(namespace.json_output))
 
 

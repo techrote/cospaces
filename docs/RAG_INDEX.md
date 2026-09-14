@@ -14,9 +14,10 @@ When instructions conflict, use this order unless a newer decision explicitly su
 6. `docs/TOOL_CATALOG.md`, for tool responsibilities and non-goals.
 7. `docs/ROADMAP.md`, for sequencing and dependency intent.
 8. `docs/HARDENING.md`, for current hardening evidence/status and pending live-smoke evidence debt.
-9. `docs/EXTERNAL_WORKLOAD.md`, for the repository-owned portable host-qualification workload contract.
-10. `docs/ISSUE_ATLAS.md`, for issue-number navigation only.
-11. `README.md`, for orientation only.
+9. `docs/VERIFICATION_EVIDENCE.md`, for concrete T4/T6 and planned T7/T8 result/evidence semantics.
+10. `docs/EXTERNAL_WORKLOAD.md`, for the repository-owned portable host-qualification workload contract.
+11. `docs/ISSUE_ATLAS.md`, for issue-number navigation only.
+12. `README.md`, for orientation only.
 
 If ambiguity remains and safe progress is possible, choose the smallest reversible implementation consistent with the higher-authority documents and record the decision in the PR. Do not broaden scope merely because adjacent functionality is attractive.
 
@@ -49,23 +50,23 @@ Also read `docs/EXTERNAL_WORKLOAD.md`. External orchestrators own host access, s
 - **checkpoint**: durable task state sufficient for a later agent/session to continue intentionally.
 - **verification plan**: repository-declared checks whose results can be represented structurally.
 - **capability observation**: a live T5 fact with explicit `present`, `absent`, `unavailable`, or `unknown` state.
-- **fixture**: a declarative reproducible experiment or benchmark.
+- **fixture**: a repository-declared reproducible T6 experiment/benchmark bound to a definition digest and observed remote HEAD.
 - **evidence bundle**: a provenance-bearing, allowlisted package of selected records/artifacts.
 - **matrix**: repeated comparable execution over explicit dimensions such as refs, configurations, or machine profiles.
-- **external workload**: repository-owned bounded warm workload exposed by `tools/external_workload.py`; it is supporting machinery, not one of the eight tools.
+- **external workload**: repository-owned bounded warm workload exposed by `tools/external_workload.py`; supporting machinery, not one of the eight tools.
 
 ## Eight-tool programme
 
-### Implemented MVP
+### Implemented
 1. `workspace`
 2. `run`
 3. `checkpoint`
 4. `verify`
+5. `capabilities`
+6. `fixture`
 
-### Activated Phase 2 sequence
-5. `capabilities` — implementing/land before T6
-6. `fixture` — activated next
-7. `evidence` — activated after T6
+### Activated next
+7. `evidence`
 
 ### Deferred
 8. `matrix`
@@ -74,7 +75,7 @@ D026 is the controlling activation decision. The pending live smoke and #22 rema
 
 ## Agent operating rule
 
-Issues in this repository are designed as autonomous execution prompts. When assigned an implementation issue, continue through implementation, test verification, documentation updates, PR creation, automated-check observation, fixes if necessary, merge when required checks pass and repository policy permits it, and issue reconciliation/closure. Do not stop at code generation or PR creation unless blocked by an external condition that cannot be resolved from repository/GitHub state.
+Issues in this repository are designed as autonomous execution prompts. Continue through implementation, test verification, documentation updates, PR creation, automated-check observation, fixes, merge when checks pass, and issue reconciliation/closure. Do not stop at code generation or PR creation unless blocked by an external condition that cannot be resolved from repository/GitHub state.
 
 ## Change discipline
 
