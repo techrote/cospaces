@@ -10,7 +10,6 @@ from .config import load_config
 from .domain.contracts import DomainFailure, FailureKind
 
 _NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
-_ENV_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _MAX_PROBES = 64
 _MAX_ARGS = 128
 _MAX_ARG_CHARS = 4096
