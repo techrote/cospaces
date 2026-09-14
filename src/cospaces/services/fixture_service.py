@@ -31,6 +31,7 @@ from cospaces.fixture_config import FixtureAssertion, FixtureDefinition, load_fi
 from cospaces.services.run_service import RunActionResult, RunService
 
 _SHA_RE = re.compile(r"^[0-9a-fA-F]{40,64}$")
+_INVALID = object()
 
 
 @dataclass(frozen=True)
@@ -64,7 +65,11 @@ def _definition_digest(fixture: FixtureDefinition) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-def _failure(code: str, message: str, kind: FailureKind = FailureKind.VERIFICATION) -> DomainFailure:
+def _failure(
+    code: str,
+    message: str,
+    kind: FailureKind = FailureKind.VERIFICATION,
+) -> DomainFailure:
     return DomainFailure(code=code, kind=kind, message=message)
 
 
@@ -99,17 +104,17 @@ def _output_failure(result: RunActionResult) -> DomainFailure | None:
 
 
 def _metric_scalar(value: object) -> MetricValue | object:
-    if value is None or isinstance(value, (str, bool, int)):
+    if value is None or isinstance(value, str | bool | int):
         return value
     if isinstance(value, float) and math.isfinite(value):
         return value
     return _INVALID
 
 
-_INVALID = object()
-
-
-def _parse_metrics(fixture: FixtureDefinition, stdout: str) -> tuple[dict[str, MetricValue], DomainFailure | None]:
+def _parse_metrics(
+    fixture: FixtureDefinition,
+    stdout: str,
+) -> tuple[dict[str, MetricValue], DomainFailure | None]:
     if fixture.metrics_format == "none":
         return {}, None
     lines = [line.strip() for line in stdout.splitlines() if line.strip()]
@@ -119,28 +124,36 @@ def _parse_metrics(fixture: FixtureDefinition, stdout: str) -> tuple[dict[str, M
         raw = json.loads(lines[-1])
     except json.JSONDecodeError:
         return {}, _failure(
-            "fixture_metrics_parse_failed", "Fixture final non-empty stdout line is not JSON"
+            "fixture_metrics_parse_failed",
+            "Fixture final non-empty stdout line is not JSON",
         )
     if not isinstance(raw, dict) or len(raw) > 256:
         return {}, _failure(
-            "fixture_metrics_parse_failed", "Fixture metrics must be a bounded JSON object"
+            "fixture_metrics_parse_failed",
+            "Fixture metrics must be a bounded JSON object",
         )
     metrics: dict[str, MetricValue] = {}
     for key, value in raw.items():
         if not isinstance(key, str) or len(key) > 128:
             return {}, _failure(
-                "fixture_metrics_parse_failed", "Fixture metric names must be bounded strings"
+                "fixture_metrics_parse_failed",
+                "Fixture metric names must be bounded strings",
             )
         parsed = _metric_scalar(value)
         if parsed is _INVALID:
             return {}, _failure(
-                "fixture_metrics_parse_failed", "Fixture metric values must be finite scalars"
+                "fixture_metrics_parse_failed",
+                "Fixture metric values must be finite scalars",
             )
         metrics[key] = parsed  # type: ignore[assignment]
     return metrics, None
 
 
-def _compare(actual: MetricValue, operator: str, expected: MetricValue) -> tuple[bool, str | None]:
+def _compare(
+    actual: MetricValue,
+    operator: str,
+    expected: MetricValue,
+) -> tuple[bool, str | None]:
     if operator == "==":
         return actual == expected, None
     if operator == "!=":
@@ -167,7 +180,8 @@ def _compare(actual: MetricValue, operator: str, expected: MetricValue) -> tuple
 
 
 def _evaluate_assertions(
-    definitions: tuple[FixtureAssertion, ...], metrics: dict[str, MetricValue]
+    definitions: tuple[FixtureAssertion, ...],
+    metrics: dict[str, MetricValue],
 ) -> tuple[FixtureAssertionResult, ...]:
     results: list[FixtureAssertionResult] = []
     for assertion in definitions:
@@ -211,7 +225,7 @@ class FixtureService:
         task_run_id: str,
         support_run_ids: tuple[str, ...],
         workspace: WorkspaceIdentity,
-        head: str | None,
+        head: str,
         started_at: str,
         started_clock: float,
         metrics: dict[str, MetricValue] | None = None,
@@ -248,6 +262,27 @@ class FixtureService:
             failure_code=failure_code,
         )
 
+    def _run_request(
+        self,
+        request: FixtureRequest,
+        *,
+        argv: tuple[str, ...],
+        timeout_seconds: float,
+        fixture_run_id: str,
+        workspace: WorkspaceIdentity | None = None,
+    ) -> RunActionResult:
+        return self._run.execute(
+            RunRequest(
+                argv=argv,
+                repository=workspace.repository if workspace is not None else request.repository,
+                ref=workspace.ref if workspace is not None else request.ref,
+                codespace=workspace.name if workspace is not None else request.codespace,
+                timeout_seconds=timeout_seconds,
+                task_id=request.task_id or f"fixture:{request.fixture}",
+                correlation_id=request.correlation_id or fixture_run_id,
+            )
+        )
+
     def execute(self, request: FixtureRequest) -> FixtureActionResult:
         loaded = load_fixture(request.root, request.fixture)
         if not loaded.ok:
@@ -259,20 +294,35 @@ class FixtureService:
         digest = _definition_digest(fixture)
         started_at = utc_now()
         started_clock = time.monotonic()
-        task = self._run.execute(
-            RunRequest(
-                argv=build_fixture_argv(fixture),
-                repository=request.repository,
-                ref=request.ref,
-                codespace=request.codespace,
-                timeout_seconds=fixture.timeout_seconds,
-                task_id=request.task_id or f"fixture:{fixture.name}",
-                correlation_id=request.correlation_id or fixture_run_id,
-            )
+
+        head_result = self._run_request(
+            request,
+            argv=build_head_probe_argv(),
+            timeout_seconds=30.0,
+            fixture_run_id=fixture_run_id,
         )
-        workspace = task.workspace
+        workspace = head_result.workspace
         if workspace is None:
-            return FixtureActionResult(failure=task.failure)
+            return FixtureActionResult(failure=head_result.failure)
+        raw_head = head_result.record.stdout.strip()
+        head = raw_head.splitlines()[0] if raw_head else None
+        if head_result.failure is not None or head is None or _SHA_RE.fullmatch(head) is None:
+            failure = head_result.failure
+            if failure is None or failure.kind == FailureKind.REMOTE:
+                failure = _failure(
+                    "fixture_provenance_failed",
+                    "Could not establish the remote fixture Git HEAD before execution",
+                )
+            return FixtureActionResult(failure=failure)
+
+        support_run_ids: list[str] = [head_result.record.run_id]
+        task = self._run_request(
+            request,
+            argv=build_fixture_argv(fixture),
+            timeout_seconds=fixture.timeout_seconds,
+            fixture_run_id=fixture_run_id,
+            workspace=workspace,
+        )
         if task.failure is not None:
             failure = _setup_failure(task)
             if failure is None:
@@ -289,46 +339,9 @@ class FixtureService:
                 fixture=fixture,
                 definition_digest=digest,
                 task_run_id=task.record.run_id,
-                support_run_ids=(),
-                workspace=workspace,
-                head=None,
-                started_at=started_at,
-                started_clock=started_clock,
-                complete=False,
-                passed=False,
-                failure_code=failure.code,
-            )
-            return FixtureActionResult(record=record, failure=failure)
-
-        support_run_ids: list[str] = []
-        head_result = self._run.execute(
-            RunRequest(
-                argv=build_head_probe_argv(),
-                repository=workspace.repository,
-                ref=workspace.ref,
-                codespace=workspace.name,
-                timeout_seconds=30.0,
-                task_id=request.task_id or f"fixture:{fixture.name}",
-                correlation_id=fixture_run_id,
-            )
-        )
-        support_run_ids.append(head_result.record.run_id)
-        head = head_result.record.stdout.strip().splitlines()[0] if head_result.record.stdout.strip() else None
-        if head_result.failure is not None or head is None or _SHA_RE.fullmatch(head) is None:
-            failure = head_result.failure
-            if failure is None or failure.kind == FailureKind.REMOTE:
-                failure = _failure(
-                    "fixture_provenance_failed",
-                    "Could not establish the remote fixture Git HEAD",
-                )
-            record = self._record(
-                fixture_run_id=fixture_run_id,
-                fixture=fixture,
-                definition_digest=digest,
-                task_run_id=task.record.run_id,
                 support_run_ids=tuple(support_run_ids),
                 workspace=workspace,
-                head=None,
+                head=head,
                 started_at=started_at,
                 started_clock=started_clock,
                 complete=False,
@@ -338,16 +351,12 @@ class FixtureService:
             return FixtureActionResult(record=record, failure=failure)
 
         if fixture.outputs:
-            output_result = self._run.execute(
-                RunRequest(
-                    argv=build_output_check_argv(fixture.outputs),
-                    repository=workspace.repository,
-                    ref=workspace.ref,
-                    codespace=workspace.name,
-                    timeout_seconds=30.0,
-                    task_id=request.task_id or f"fixture:{fixture.name}",
-                    correlation_id=fixture_run_id,
-                )
+            output_result = self._run_request(
+                request,
+                argv=build_output_check_argv(fixture.outputs),
+                timeout_seconds=30.0,
+                fixture_run_id=fixture_run_id,
+                workspace=workspace,
             )
             support_run_ids.append(output_result.record.run_id)
             if output_result.failure is not None:
