@@ -628,13 +628,12 @@ class EvidenceService:
                 checked += 1
 
         actual_files: set[str] = set()
-        files_dir = bundle / "files"
-        if files_dir.exists():
-            for child in files_dir.rglob("*"):
-                if child.is_symlink():
-                    return self._validation_failure("Evidence bundle contains a symlink")
-                if child.is_file():
-                    actual_files.add(child.relative_to(bundle).as_posix())
+        for child in bundle.rglob("*"):
+            if child.is_symlink():
+                return self._validation_failure("Evidence bundle contains a symlink")
+            if not child.is_file() or child == manifest_path:
+                continue
+            actual_files.add(child.relative_to(bundle).as_posix())
         if actual_files != expected_files:
             return self._validation_failure("Evidence bundle contains missing or unexpected files")
 
