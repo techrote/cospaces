@@ -19,7 +19,7 @@ _FIXTURE_SCRIPT = (
     'repo_name="${GITHUB_REPOSITORY##*/}"; root="/workspaces/$repo_name"; '
     f'[ -n "$repo_name" ] && [ -d "$root" ] || {{ {_ROOT_FAILURE}; }}; '
     f'root_real=$(cd "$root" 2>/dev/null && pwd -P) || {{ {_ROOT_FAILURE}; }}; '
-    'work=$1; shift; '
+    "work=$1; shift; "
     f'work_real=$(cd "$root/$work" 2>/dev/null && pwd -P) || {{ {_CWD_FAILURE}; }}; '
     f'case "$work_real" in "$root_real"|"$root_real"/*) ;; *) {_ESCAPE_FAILURE} ;; esac; '
     'cd "$work_real" || exit 98; count=$1; shift; i=0; '
@@ -34,12 +34,12 @@ _OUTPUT_SCRIPT = (
     'repo_name="${GITHUB_REPOSITORY##*/}"; root="/workspaces/$repo_name"; '
     f'[ -n "$repo_name" ] && [ -d "$root" ] || {{ {_OUTPUT_ROOT_FAILURE}; }}; '
     f'root_real=$(cd "$root" 2>/dev/null && pwd -P) || {{ {_OUTPUT_ROOT_FAILURE}; }}; '
-    'count=$1; shift; i=0; '
+    "count=$1; shift; i=0; "
     'while [ "$i" -lt "$count" ]; do '
     f'candidate=$(readlink -f -- "$root/$1" 2>/dev/null) || {{ {_OUTPUT_MISSING}; }}; '
     f'case "$candidate" in "$root_real"|"$root_real"/*) ;; *) {_OUTPUT_ESCAPE} ;; esac; '
     f'[ -e "$candidate" ] || {{ {_OUTPUT_MISSING}; }}; '
-    'shift; i=$((i + 1)); done'
+    "shift; i=$((i + 1)); done"
 )
 
 _HEAD_SCRIPT = (
