@@ -48,9 +48,7 @@ def test_fixture_config_parses_reproducibility_fields(tmp_path: Path) -> None:
 def test_fixture_config_rejects_path_traversal(tmp_path: Path) -> None:
     write_fixture(
         tmp_path,
-        "[fixture.bad]\n"
-        'command = ["true"]\n'
-        'inputs = ["../secret"]\n',
+        '[fixture.bad]\ncommand = ["true"]\ninputs = ["../secret"]\n',
     )
 
     result = load_fixture(tmp_path, "bad")
@@ -83,10 +81,7 @@ def test_fixture_config_rejects_assertion_without_metrics(tmp_path: Path) -> Non
 def test_fixture_config_rejects_nonfinite_parameter(tmp_path: Path) -> None:
     write_fixture(
         tmp_path,
-        "[fixture.bad]\n"
-        'command = ["true"]\n'
-        "[fixture.bad.parameters]\n"
-        "ratio = nan\n",
+        '[fixture.bad]\ncommand = ["true"]\n[fixture.bad.parameters]\nratio = nan\n',
     )
 
     result = load_fixture(tmp_path, "bad")
