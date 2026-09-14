@@ -87,7 +87,7 @@ def _parse_probe(raw: Any, index: int) -> CapabilityProbe | str:
     if any("\x00" in item or len(item) > _MAX_ARG_CHARS for item in command):
         return f"capabilities.probes[{index}].command contains an invalid argument"
     timeout = raw.get("timeout_seconds", 10.0)
-    if isinstance(timeout, bool) or not isinstance(timeout, (int, float)):
+    if isinstance(timeout, bool) or not isinstance(timeout, int | float):
         return f"capabilities.probes[{index}].timeout_seconds must be numeric"
     timeout = float(timeout)
     if not math.isfinite(timeout) or not 0 < timeout <= _MAX_TIMEOUT:
