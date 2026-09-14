@@ -6,7 +6,7 @@ from pathlib import Path
 
 from cospaces import __version__
 from cospaces.adapters.github_cli import GitHubCliAdapter
-from cospaces.capabilities_config import CapabilityConfig, CapabilityProbe, load_capability_config
+from cospaces.capabilities_config import CapabilityProbe, load_capability_config
 from cospaces.domain.capabilities import (
     CapabilityObservation,
     CapabilityReport,
@@ -147,7 +147,11 @@ class CapabilityService:
         value = match.group(1) if match.lastindex else match.group(0)
         return value[:128], None
 
-    def _observe_run(self, probe: CapabilityProbe, result: RunActionResult) -> CapabilityObservation:
+    def _observe_run(
+        self,
+        probe: CapabilityProbe,
+        result: RunActionResult,
+    ) -> CapabilityObservation:
         record = result.record
         combined = "\n".join(part for part in (record.stdout, record.stderr) if part)
         if result.failure is None:
