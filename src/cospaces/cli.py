@@ -12,6 +12,8 @@ from .checkpoint_cli import add_checkpoint_parser
 from .checkpoint_dispatch import run_checkpoint
 from .domain.contracts import DomainFailure, FailureKind
 from .domain.results import failure_result
+from .evidence_cli import add_evidence_parser
+from .evidence_dispatch import run_evidence
 from .fixture_cli import add_fixture_parser
 from .fixture_dispatch import run_fixture
 from .run_cli import add_run_parser
@@ -36,7 +38,16 @@ def build_parser() -> argparse.ArgumentParser:
     add_verify_parser(subparsers)
     add_capabilities_parser(subparsers)
     add_fixture_parser(subparsers)
-    implemented = {"workspace", "run", "checkpoint", "verify", "capabilities", "fixture"}
+    add_evidence_parser(subparsers)
+    implemented = {
+        "workspace",
+        "run",
+        "checkpoint",
+        "verify",
+        "capabilities",
+        "fixture",
+        "evidence",
+    }
     for tool in PLANNED_TOOLS:
         if tool in implemented:
             continue
@@ -77,6 +88,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_capabilities(namespace)
     if tool == "fixture":
         return run_fixture(namespace)
+    if tool == "evidence":
+        return run_evidence(namespace)
     return _planned_tool(tool, json_output=bool(namespace.json_output))
 
 
